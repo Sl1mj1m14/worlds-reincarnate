@@ -1,6 +1,10 @@
 use eframe::egui;
 
+use mc_classic as classic;
+use mc_classic_js as js;
+
 mod ui;
+mod convert;
 
 const APP_NAME: &str = "Worlds Reincarnate";
 const BASE_WIDTH: f32 = 400.0;
