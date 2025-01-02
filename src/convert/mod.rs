@@ -1,13 +1,79 @@
-use mc_classic_js::JSLevel;
+use std::collections::HashMap;
+
+use thiserror::Error;
+
+use mc_classic_js::{ChangedBlocks, JSLevel};
 use mc_classic::Level;
 
-pub fn classic_to_js (classic: Level, seed: i64, opt: u8) -> JSLevel {
+#[derive(Error, Debug)]
+
+pub enum ConversionError {
+    #[error("Unable to Recognize World Size")]
+    AmbiguousWorldSize()
+}
+
+pub fn classic_to_js (classic: Level, seed: i64, opt: u8) -> Result<JSLevel,ConversionError> {
     let mut tile_map: Vec<u8> = Vec::new();
 
     if classic.blocks.is_some() { tile_map = classic.blocks.unwrap().clone() }
 
+    //Replace these values with defaults from a config file
+    let mut x: i32 = if classic.width.is_some() { classic.width.unwrap() } else { 256 };
+    let mut y: i32 = if classic.depth.is_some() { classic.depth.unwrap() } else { 64 };
+    let mut z: i32 = if classic.height.is_some() { classic.height.unwrap() } else { 256 };
+
+    //Handler for errors regarding world size
+    if x*y*z != tile_map.len() as i32 && tile_map.len() > 0 {
+        let len: i32 = tile_map.len() as i32;
+        if ((((len/y) as f64).sqrt()*10.0) as i32)%10 == 0 {
+            x = ((len/y) as f64).sqrt() as i32;
+            z = ((len/y) as f64).sqrt() as i32;
+        } else if ((((len/64) as f64).sqrt()*10.0) as i32)%10 == 0 {
+            y = 64;
+            x = ((len/y) as f64).sqrt() as i32;
+            z = ((len/y) as f64).sqrt() as i32;
+        } else if len%y == 0 {
+            let w: i32 = len/y;
+            if w%x == 0 { z = w/x }
+            else if w%z == 0 { x = w/z }
+            else if w%64 == 0 { x = 64; z = w/x; }
+            else if w%128 == 0 { x = 128; z = w/x; }
+            else if w%256 == 0 { x = 256; z = w/x; }
+            else if w%512 == 0 { x = 512; z = w/x; }
+            else if w%1024 == 0 { x = 1024; z = w/x; }
+            else { return Err(ConversionError::AmbiguousWorldSize()) }
+        } else if len%64 == 0 { 
+            y = 64;
+            let w: i32 = len/y;
+            if w%x == 0 { z = w/x }
+            else if w%z == 0 { x = w/z }
+            else if w%64 == 0 { x = 64; z = w/x; }
+            else if w%128 == 0 { x = 128; z = w/x; }
+            else if w%256 == 0 { x = 256; z = w/x; }
+            else if w%512 == 0 { x = 512; z = w/x; }
+            else if w%1024 == 0 { x = 1024; z = w/x; }
+            else { return Err(ConversionError::AmbiguousWorldSize()) }
+        } else {
+            return Err(ConversionError::AmbiguousWorldSize())
+        }
+    }
+
+    //Containing the level to Y64
+    if y > 64 && tile_map.len() > 0 {
+        println!("Warning! Height is Restricted at 64 for Javascript Levels");
+        println!("Shearing off {} levels from the world", y-64);
+        for _ in 0..((y-64)*x*z) { _ = tile_map.pop() }
+    }
+
+    if y < 64 && tile_map.len() > 0 {
+        for _ in 0..((64-y)*x*z) { tile_map.push(0) }
+    }
+
+    y = 64;
+
+    //Converting tile ids to javascript tile ids
     let mut i: usize = 0;
-    for tile in tile_map {
+    for tile in tile_map.clone() {
         match tile {
             1 => tile_map[i] = 2, //Stone
             2 => tile_map[i] = 1, //Grass Block
@@ -62,16 +128,34 @@ pub fn classic_to_js (classic: Level, seed: i64, opt: u8) -> JSLevel {
         i += 1;
     }
 
-    //TO DO: Trim level if height is invalid
-    //Rearrange blocks for non-square worlds
+    //Converting the tile map to an array of changed blocks
+    let mut changed_blocks: HashMap<String, mc_classic_js::ChangedBlocks> = HashMap::new();
 
-    let world_size: i32 = 256; //Replace 256 with a default from a config file
-
-    if classic.width.is_some() && classic.height.is_some() {
-        world_size = if classic.width >= classic.height { classic.width } else { classic.height }
+    if tile_map.len() > 0 {
+        for i in 0..y {
+            for j in 0..z {
+                for k in 0..x {
+                    let key: String = String::from(format!(r#""p{}_{}_{}":"#,k,i,j));
+                    changed_blocks.insert(key, ChangedBlocks {a: 1, bt: tile_map[((i*z*x) + (j*x) + k) as usize]});
+                }
+            }
+        }
     }
 
+    //Creating JSLevel object
+    let world_size: i32 = if x >= z {x} else {z};
     let seed1: i64 = if seed > 0 {seed} else {1}; //Replace 1 with a default seed from a config file
 
-    let temp = 0;
+    let mut level: JSLevel = JSLevel {
+        worldSeed: seed1,
+        changedBlocks: changed_blocks,
+        worldSize: world_size,
+        version: 1
+    };
+
+    //Optimizing Level
+    let tile_map1: Vec<u8> = mc_classic_js::get_tile_map(world_size, seed1);
+    level = mc_classic_js::deserialize_saved_game(mc_classic_js::serialize_saved_game(level, tile_map1, opt));
+
+    return Ok(level)
 }
