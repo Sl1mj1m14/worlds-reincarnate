@@ -1,17 +1,16 @@
 use eframe::egui::{self, Sense, UiBuilder};
+
+mod buttons;
+mod sub_menus;
 #[derive(Default)]
 pub struct App {
-    pub file_open: bool,
-    pub settings_open: bool,
-    pub convert_open: bool
+    pub sub_menu: sub_menus::Menu,
 }
 
 impl App {
     pub fn new() -> Self {
         App {
-            file_open: false,
-            settings_open: false,
-            convert_open: false
+            sub_menu: sub_menus::Menu::new()
         }
     }
 }
@@ -19,16 +18,24 @@ impl App {
 impl eframe::App for App {
     fn update (&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
 
-        let mut file_open = self.file_open;
-        egui::Window::new("file_menu")
-        .open(&mut file_open)
-        .anchor(egui::Align2::LEFT_TOP,[0.0,0.0])
+        let mut in_sub_menu: bool = false;
+
+        egui::Window::new(self.sub_menu.title.clone())
+        .open(&mut self.sub_menu.enabled.clone())
+        .anchor(egui::Align2::LEFT_TOP,self.sub_menu.offset.clone())
         .title_bar(false)
-        .auto_sized()
+        .min_width(self.sub_menu.width.clone())
+        .max_width(self.sub_menu.width.clone())
+        .resizable([false, false])
         .show(ctx, |ui| {
-            if !ctx.is_pointer_over_area() { self.file_open = false }
-            if ui.add_enabled(false, egui::Button::new("Open")).clicked() {
-                //Open New File Somehow...
+            if ctx.is_pointer_over_area() { in_sub_menu = true; }
+            for button in &self.sub_menu.buttons {
+                if ui.add_enabled(button.settings().enabled, egui::Button::new(button.settings().name)).clicked() {
+                    match button.action() {
+                        Ok(_) => (),
+                        Err(e) => eprintln!("{e}")
+                    }
+                }
             }
         });
 
@@ -38,17 +45,17 @@ impl eframe::App for App {
                 columns[0]
                 .vertical_centered(|ui| {
                     if ui.add( egui::Button::new("File")).clicked() {
-                        self.file_open = true;
+                        self.sub_menu.set_file_menu();
                     }
                 });
                 columns[1].vertical_centered(|ui| {
                     if ui.add( egui::Button::new("Settings")).clicked() {
-                        self.settings_open = true;
+                        self.sub_menu.set_settings_menu();
                     }
                 });
                 columns[2].vertical_centered(|ui| {
                     if ui.add( egui::Button::new("Convert")).clicked() {
-                        self.convert_open = true;
+                        self.sub_menu.set_convert_menu();
                     }
                 });
             }); 

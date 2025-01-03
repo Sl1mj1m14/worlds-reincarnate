@@ -11,7 +11,7 @@ mod read;
 mod write;
 
 const APP_NAME: &str = "Worlds Reincarnate";
-const BASE_WIDTH: f32 = 400.0;
+const BASE_WIDTH: f32 = 600.0;
 const BASE_HEIGHT: f32 = 400.0;
 
 fn main () -> eframe::Result {
