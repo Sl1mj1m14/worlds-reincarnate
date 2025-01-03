@@ -16,7 +16,7 @@ const BASE_HEIGHT: f32 = 400.0;
 
 fn main () -> eframe::Result {
 
-    let app = ui::App {};
+    let app: ui::App = ui::App::new();
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
