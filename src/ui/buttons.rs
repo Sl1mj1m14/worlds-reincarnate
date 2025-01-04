@@ -1,4 +1,5 @@
 use eframe::egui::WidgetText;
+use rfd::FileDialog;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -26,15 +27,21 @@ impl Open { pub fn new() -> Self { Open {}}}
 impl Button for Open {
 
     fn action (&self) -> Result<(),ActionError> {
-        //To Do - Open A File
+        let file: Option<std::path::PathBuf> = FileDialog::new()
+        .set_directory("/")
+        .pick_file();
+        if file.is_some() {
+            
+        }
         Ok(())
+
     }
 
     fn settings (&self) -> Settings {
         Settings {
             name: "Open".into(),
             shortcut: None,
-            enabled: false
+            enabled: true
         }
     }
 }

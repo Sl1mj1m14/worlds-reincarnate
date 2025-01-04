@@ -1,10 +1,12 @@
 use eframe::egui;
+use rfd::FileDialog;
 
 use thiserror::Error;
 
 use mc_classic;
 use mc_classic_js;
 
+mod log;
 mod ui;
 mod convert;
 mod read;

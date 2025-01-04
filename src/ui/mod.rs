@@ -32,7 +32,7 @@ impl eframe::App for App {
             for button in &self.sub_menu.buttons {
                 if ui.add_enabled(button.settings().enabled, egui::Button::new(button.settings().name)).clicked() {
                     match button.action() {
-                        Ok(_) => (),
+                        Ok(_) => self.sub_menu.enabled = false,
                         Err(e) => eprintln!("{e}")
                     }
                 }
