@@ -18,6 +18,8 @@ const BASE_HEIGHT: f32 = 400.0;
 
 fn main () -> eframe::Result {
 
+    env_logger::init();
+
     let app: ui::App = ui::App::new();
 
     let options = eframe::NativeOptions {

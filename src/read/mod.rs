@@ -10,7 +10,9 @@ pub enum ReadError {
 }
 
 pub fn check_file_type (path: PathBuf) -> Result<String,ReadError> {
-    let ext: Vec<&str> = path.clone().to_str().unwrap_or("").split("/").collect();
+    let p: &str = path.to_str().unwrap_or("");
+    let ext: Vec<&str> = p.split("/").collect();
+    println!("{:?}",ext);
     //read(path)
     return Ok("Unknown".to_string())
 }
