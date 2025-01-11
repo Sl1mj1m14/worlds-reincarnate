@@ -12,13 +12,17 @@ mod convert;
 mod read;
 mod write;
 
-const APP_NAME: &str = "Worlds Reincarnate";
+pub const DEBUG_FLAG: bool = true;
+pub const QUALIFIER: &str = "org";
+pub const ORGANIZATION: &str = "Sl1mJ1m Inc";
+pub const APPLICATION: &str = "Worlds Reincarnate";
+
 const BASE_WIDTH: f32 = 600.0;
 const BASE_HEIGHT: f32 = 400.0;
 
 fn main () -> eframe::Result {
 
-    env_logger::init();
+    //env_logger::init();
 
     let app: ui::App = ui::App::new();
 
@@ -29,7 +33,7 @@ fn main () -> eframe::Result {
     };
 
     eframe::run_native(
-        APP_NAME,
+        APPLICATION,
          options, 
          Box::new(|_|Ok(Box::new(app)))
     )
