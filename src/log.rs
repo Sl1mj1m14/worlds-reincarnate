@@ -1,7 +1,7 @@
 use std::fmt::Error;
 use directories;
 
-use main;
+use crate::main;
 
 pub fn append_line (variant: u8, line: String) {
     
