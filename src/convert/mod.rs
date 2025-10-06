@@ -1,9 +1,13 @@
 use std::{collections::HashMap, fs::File, io::{BufRead, BufReader}, num::ParseIntError};
 
 use thiserror::Error;
+use regex::Regex;
 
-const ID_PATH: &str = "block_ids/";
+use crate::functions::{hex2dec,path2reader};
 
+const BLOCK_ID_PATH: &str = "ids/block_ids/";
+const BLOCK_ID_FILE: &str = "block_id_file.csv";
+const SAMVID_FILE: &str = "ids/samvids.csv";
 
 #[derive(Default)]
 pub struct BlockArray {
@@ -37,16 +41,16 @@ pub enum ConversionError {
 
 }
 
-pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32) -> Result<Vec<i32>,ConversionError> {
+pub fn ids_to_blocks (array: Vec<i32>, major_version: &str, minor_version: i32) -> Result<Vec<Block>,ConversionError> {
 
-    let path: String = ID_PATH.to_string() + major_version + "_" + &minor_version.to_string() + ".csv";
-    let file = File::open(path).unwrap();
-    let reader = BufReader::new(file);
+    let suffix: i32 = samvid_to_suffix(major_version, minor_version)?;
 
-    let mut id_map: HashMap<Block, i32> = HashMap::new();
+    let path: String = BLOCK_ID_PATH.to_string() + major_version + "_" + &suffix.to_string() + ".csv";
+    let reader = path2reader(&path)?;
+
+    let mut id_map: HashMap<i32, Block> = HashMap::new();
     let mut format: String = "byte".to_string();
-    let mut default: i32 = 0x00000001;
-
+    let mut default: i32 = 0x00000000;
 
     for line in reader.lines() {
 
@@ -54,7 +58,63 @@ pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32)
         let pairs: Vec<&str> = line1.split(',').collect();
 
         if pairs[0] == "DEFAULT" {
-            default = i32::from_str_radix(pairs[1].strip_prefix("0x").unwrap_or(pairs[1]), 16)?;
+            default = hex2dec(pairs[1])?;
+            continue;
+        }
+        if pairs[0] == "FORMAT" {
+            format = pairs[1].to_string();
+            continue;
+        }
+
+        if !does_it_exist(pairs[2], minor_version) {
+            continue;
+        }
+
+        let value: Block = match format.as_str() {
+            "byte" => Block::byte(pairs[0].parse()?),
+            "int" => Block::int(pairs[0].parse()?),
+            "string" => Block::string(pairs[0].to_string()),
+            _ => Block::byte(pairs[0].parse()?)
+        };
+
+        let key: i32 = hex2dec(pairs[1])?;
+
+        if !id_map.contains_key(&key) {
+            id_map.insert(key,value);
+        }
+    }
+
+
+    let default_block: Block = id_map[&default].clone();
+    let mut blocks: Vec<Block> = Vec::new();
+
+    for id in array {
+        if id_map.contains_key(&id) {blocks.push(id_map[&id].clone());} 
+        else {blocks.push(default_block.clone());}
+    }
+
+    Ok(blocks)
+
+}
+
+pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32) -> Result<Vec<i32>,ConversionError> {
+
+    let suffix: i32 = samvid_to_suffix(major_version, minor_version)?;
+
+    let path: String = BLOCK_ID_PATH.to_string() + major_version + "_" + &suffix.to_string() + ".csv";
+    let reader = path2reader(&path)?;
+
+    let mut id_map: HashMap<Block, i32> = HashMap::new();
+    let mut format: String = "byte".to_string();
+    let mut default: i32 = 0x00000000;
+
+    for line in reader.lines() {
+
+        let line1: String = line?.to_string();
+        let pairs: Vec<&str> = line1.split(',').collect();
+
+        if pairs[0] == "DEFAULT" {
+            default = hex2dec(pairs[1])?;
             continue;
         }
         if pairs[0] == "FORMAT" {
@@ -69,7 +129,7 @@ pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32)
             _ => Block::byte(pairs[0].parse()?)
         };
 
-        let value: i32 = i32::from_str_radix(pairs[1].strip_prefix("0x").unwrap_or(pairs[1]), 16)?;
+        let value: i32 = hex2dec(pairs[1])?;
 
         if !id_map.contains_key(&key) {
             id_map.insert(key,value);
@@ -153,3 +213,52 @@ fn format_to_mults (input: &[&str; 3], dims: &[i32; 3]) -> Vec<i32> {
 
     mults
 }
+
+fn samvid_to_suffix (major_version: &str, minor_version: i32) -> Result<i32,ConversionError> {
+
+    let path: String = BLOCK_ID_PATH.to_string() + BLOCK_ID_FILE;
+    let reader = path2reader(&path)?;
+    let mut last: i32 = -1;
+    let mut last_value: i32 = 0;
+
+    for line in reader.lines() {
+        let line1: String = line?.to_string();
+        let threesome: Vec<&str> = line1.split(',').collect();
+
+        if threesome[0] != major_version {continue;}
+
+        if minor_version == threesome[2].parse()? {return Ok(threesome[1].parse()?)}
+        else if last == -1 || (minor_version > threesome[2].parse()? && last < threesome[2].parse()?) {
+            last = threesome[2].parse()?;
+            last_value = threesome[1].parse()?;
+        }
+    }
+
+    Ok(last_value)
+}
+
+fn does_it_exist (valid: &str, version: i32) -> bool {
+    let ranges: Vec<&str> = valid.split(";").collect();
+
+    let mut is_added = false;
+    let mut is_present = false;
+
+    for i in 0..ranges.len() {
+        let check: i32 = Regex::new(r"\+|\-").unwrap().replace_all(ranges[i], "").into_owned().parse().unwrap();
+
+        if i%2 == 0 {
+            if version >= check {is_added = true}
+            else {is_added = false}
+        } else {
+            if version < check {is_present = true}
+            else {is_present = false}
+        }
+
+        if is_added && is_present {return true}
+    }
+
+    if ranges.len()%2 != 0 {is_present = true}
+
+    return is_added && is_present;
+}
+

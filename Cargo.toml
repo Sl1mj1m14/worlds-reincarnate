@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 thiserror = "2.0.17"
-iced = "0.13.1"
+regex = "1.11.3"
