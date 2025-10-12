@@ -11,9 +11,8 @@ const SAMVID_FILE: &str = "ids/samvids.csv";
 
 #[derive(Default)]
 pub struct BlockArray {
-    x: i32,
-    y: i32,
-    z: i32,
+    format: [String; 3], //The order of iterating through the dimensions, should only contain "+/-" xyz
+    dims: [i32; 3], //World dimensions in xyz format
     blocks: Vec<Block>
 }
 
@@ -147,9 +146,9 @@ pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32)
 
 }
 
-pub fn rotate_array (input_array: BlockArray, input_format: &[&str; 3], output_format: &[&str; 3]) -> BlockArray {
+pub fn rotate_array (input_array: BlockArray, output_format: [String; 3]) -> BlockArray {
     let mut output_blocks: Vec<Block> = vec![Block::byte(0); input_array.blocks.len()];
-    let dims: &[i32; 3] = &[input_array.x, input_array.y, input_array.z];
+    //let dims: &[i32; 3] = &[input_array.x, input_array.y, input_array.z];
 
     /******************************************
     Format of arrays used in this conversion are as follows:
@@ -161,12 +160,12 @@ pub fn rotate_array (input_array: BlockArray, input_format: &[&str; 3], output_f
     [5] = flipped_z
     ******************************************/
 
-    let in_mults: Vec<i32> = format_to_mults(input_format, dims);
-    let out_mults: Vec<i32> = format_to_mults(output_format, dims);
+    let in_mults: Vec<i32> = format_to_mults(input_array.format, input_array.dims);
+    let out_mults: Vec<i32> = format_to_mults(output_format.clone(), input_array.dims);
 
-    for x in 0..dims[0] {
-        for y in 0..dims[1] {
-            for z in 0..dims[2] {
+    for x in 0..input_array.dims[0] {
+        for y in 0..input_array.dims[1] {
+            for z in 0..input_array.dims[2] {
                 output_blocks[(((out_mults[1]-1-x).abs()*out_mults[0])+((out_mults[3]-1-y).abs()*out_mults[2])+((out_mults[5]-1-z).abs()*out_mults[4])) as usize] =
                 input_array.blocks[(((in_mults[1]-1-x).abs()*in_mults[0])+((in_mults[3]-1-y).abs()*in_mults[2])+((in_mults[5]-1-z).abs()*in_mults[4])) as usize].clone()
             }
@@ -174,14 +173,51 @@ pub fn rotate_array (input_array: BlockArray, input_format: &[&str; 3], output_f
     }
 
     BlockArray {
-        x: input_array.x,
-        y: input_array.y,
-        z: input_array.z,
+        format: output_format,
+        dims: input_array.dims,
         blocks: output_blocks
     }
 }
 
-fn format_to_mults (input: &[&str; 3], dims: &[i32; 3]) -> Vec<i32> {
+//The bounds should be a range to define the size of the world, the dimension arrays are in 'xyz' format
+//For example, if the world is going to be 64 blocks from the bottom, the bounds should be 0 and 63
+pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i32; 3]) -> BlockArray {
+
+    let mut output_blocks: Vec<Block> = Vec::new();
+    let mut index: usize = 0;
+
+    for x in 0..world.dims[0] {
+        for y in 0..world.dims[1] {
+            for z in 0..world.dims[2] {
+
+                //Only pushing blocks if they are within the new world size
+                if
+                    x >= lower_bounds[0] && x <= upper_bounds[0] &&
+                    y >= lower_bounds[1] && y <= upper_bounds[1] &&
+                    z >= lower_bounds[2] && z <= upper_bounds[2]
+                { 
+                    output_blocks.push(world.blocks[index].clone());
+                    index += 1;
+                }
+
+            }
+        }
+    }
+
+    let mut output_dims: [i32; 3] = [0; 3];
+    for i in 0..3 {
+        output_dims[i] = upper_bounds[i]-lower_bounds[i]+1
+    }
+
+    BlockArray {
+        format: world.format,
+        dims: output_dims,
+        blocks: output_blocks
+    }
+
+}
+
+fn format_to_mults (input: [String; 3], dims: [i32; 3]) -> Vec<i32> {
 
     let mut mults: Vec<i32> = vec![1; 6];
     let mut second_level: i32 = 1;
@@ -207,9 +243,9 @@ fn format_to_mults (input: &[&str; 3], dims: &[i32; 3]) -> Vec<i32> {
         _ => ()
     }
 
-    if input.contains(&"-x") { mults[1] = dims[0]}
-    if input.contains(&"-y") { mults[3] = dims[1]}
-    if input.contains(&"-z") { mults[5] = dims[2]}
+    if input.contains(&"-x".to_string()) { mults[1] = dims[0]}
+    if input.contains(&"-y".to_string()) { mults[3] = dims[1]}
+    if input.contains(&"-z".to_string()) { mults[5] = dims[2]}
 
     mults
 }
