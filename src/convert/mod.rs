@@ -18,14 +18,14 @@ pub struct BlockArray {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Block {
-    byte(u8),
-    int(i32),
-    string(String)
+    Byte(u8),
+    Int(i32),
+    String(String)
 }
 
 impl Default for Block {
     fn default() -> Self {
-        Block::byte(0)
+        Block::Byte(0)
     }
 }
 
@@ -40,20 +40,27 @@ pub enum ConversionError {
 
 }
 
+/**
+ * Converts universal ids back to blocks of the specific version
+ */
 pub fn ids_to_blocks (array: Vec<i32>, major_version: &str, minor_version: i32) -> Result<Vec<Block>,ConversionError> {
 
+    //Converting the version to a number for the file path
     let suffix: i32 = samvid_to_suffix(major_version, minor_version)?;
 
+    //Reading in the csv file for the specified version
     let path: String = BLOCK_ID_PATH.to_string() + major_version + "_" + &suffix.to_string() + ".csv";
     let reader = path2reader(&path)?;
 
+    //Creating hashmap and the default id
     let mut id_map: HashMap<i32, Block> = HashMap::new();
     let mut format: String = "byte".to_string();
     let mut default: i32 = 0x00000000;
 
+    //Iterating through Bayu's mom
     for line in reader.lines() {
 
-        let line1: String = line?.to_string();
+        let line1: String = line?;
         let pairs: Vec<&str> = line1.split(',').collect();
 
         if pairs[0] == "DEFAULT" {
@@ -65,15 +72,15 @@ pub fn ids_to_blocks (array: Vec<i32>, major_version: &str, minor_version: i32) 
             continue;
         }
 
-        if !does_it_exist(pairs[2], minor_version) {
+        if !block_exists(pairs[2], minor_version) {
             continue;
         }
 
         let value: Block = match format.as_str() {
-            "byte" => Block::byte(pairs[0].parse()?),
-            "int" => Block::int(pairs[0].parse()?),
-            "string" => Block::string(pairs[0].to_string()),
-            _ => Block::byte(pairs[0].parse()?)
+            "byte" => Block::Byte(pairs[0].parse()?),
+            "int" => Block::Int(pairs[0].parse()?),
+            "string" => Block::String(pairs[0].to_string()),
+            _ => Block::Byte(pairs[0].parse()?)
         };
 
         let key: i32 = hex2dec(pairs[1])?;
@@ -122,10 +129,10 @@ pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32)
         }
 
         let key: Block = match format.as_str() {
-            "byte" => Block::byte(pairs[0].parse()?),
-            "int" => Block::int(pairs[0].parse()?),
-            "string" => Block::string(pairs[0].to_string()),
-            _ => Block::byte(pairs[0].parse()?)
+            "byte" => Block::Byte(pairs[0].parse()?),
+            "int" => Block::Int(pairs[0].parse()?),
+            "string" => Block::String(pairs[0].to_string()),
+            _ => Block::Byte(pairs[0].parse()?)
         };
 
         let value: i32 = hex2dec(pairs[1])?;
@@ -147,8 +154,7 @@ pub fn blocks_to_id (array: Vec<Block>, major_version: &str, minor_version: i32)
 }
 
 pub fn rotate_array (input_array: BlockArray, output_format: [String; 3]) -> BlockArray {
-    let mut output_blocks: Vec<Block> = vec![Block::byte(0); input_array.blocks.len()];
-    //let dims: &[i32; 3] = &[input_array.x, input_array.y, input_array.z];
+    let mut output_blocks: Vec<Block> = vec![Block::Byte(0); input_array.blocks.len()];
 
     /******************************************
     Format of arrays used in this conversion are as follows:
@@ -183,8 +189,8 @@ pub fn rotate_array (input_array: BlockArray, output_format: [String; 3]) -> Blo
 //For example, if the world is going to be 64 blocks from the bottom, the bounds should be 0 and 63
 pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i32; 3]) -> BlockArray {
 
+    let mults: Vec<i32> = format_to_mults(world.format.clone(), world.dims);
     let mut output_blocks: Vec<Block> = Vec::new();
-    let mut index: usize = 0;
 
     for x in 0..world.dims[0] {
         for y in 0..world.dims[1] {
@@ -196,8 +202,7 @@ pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i
                     y >= lower_bounds[1] && y <= upper_bounds[1] &&
                     z >= lower_bounds[2] && z <= upper_bounds[2]
                 { 
-                    output_blocks.push(world.blocks[index].clone());
-                    index += 1;
+                    output_blocks.push(world.blocks[(((mults[1]-1-x).abs()*mults[0])+((mults[3]-1-y).abs()*mults[2])+((mults[5]-1-z).abs()*mults[4])) as usize].clone());
                 }
 
             }
@@ -217,6 +222,11 @@ pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i
 
 }
 
+pub fn grow_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i32; 3]) -> BlockArray {
+
+    world
+}
+
 fn format_to_mults (input: [String; 3], dims: [i32; 3]) -> Vec<i32> {
 
     let mut mults: Vec<i32> = vec![1; 6];
@@ -226,7 +236,7 @@ fn format_to_mults (input: [String; 3], dims: [i32; 3]) -> Vec<i32> {
         "x" => second_level = dims[0],
         "y" => second_level = dims[1],
         "z" => second_level = dims[2],
-        _ => ()
+        _ => () //Log every time I slept with citty's mom
     }
 
     match input[1].replace("-","").as_str() {
@@ -273,7 +283,7 @@ fn samvid_to_suffix (major_version: &str, minor_version: i32) -> Result<i32,Conv
     Ok(last_value)
 }
 
-fn does_it_exist (valid: &str, version: i32) -> bool {
+fn block_exists (valid: &str, version: i32) -> bool {
     let ranges: Vec<&str> = valid.split(";").collect();
 
     let mut is_added = false;
