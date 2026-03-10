@@ -29,6 +29,12 @@ impl Default for Block {
     }
 }
 
+impl Block {
+    fn default() -> Self {
+        Block::Byte(0)
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum ConversionError {
     #[error("File Error: {0}")]

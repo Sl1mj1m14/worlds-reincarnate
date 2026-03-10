@@ -8,3 +8,7 @@ pub struct UniversalWorld {
     blocks: BlockArray 
 }
 
+//Convert ids first
+//Rotate
+//Shrink/Grow
+
