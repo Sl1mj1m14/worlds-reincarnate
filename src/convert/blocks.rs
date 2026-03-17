@@ -3,7 +3,7 @@ use std::{collections::HashMap, io::BufRead, num::ParseIntError};
 use thiserror::Error;
 use regex::Regex;
 
-use crate::functions::{hex2dec,path2reader};
+use crate::functions::{hex2dec};
 
 const BLOCK_ID_PATH: &str = "ids/block_ids/";
 const BLOCK_ID_FILE: &str = "block_id_file.csv";

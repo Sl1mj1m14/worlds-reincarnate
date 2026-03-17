@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mc-classic = "0.1.2"
+mc-classic = "0.1.4"
 mc-classic-js = "0.2.5"
 regex = "1.12.2"
 thiserror = "2.0.17"
