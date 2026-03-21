@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 mc-classic = "0.1.4"
 mc-classic-js = "0.2.5"
+
 chrono = "0.4.44"
+colored = "3.1.1"
 regex = "1.12.3"
 thiserror = "2.0.17"
