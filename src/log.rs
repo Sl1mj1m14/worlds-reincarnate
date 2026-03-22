@@ -1,4 +1,4 @@
-use std::{fmt::Error, fs::{File, OpenOptions}, path::PathBuf, sync::OnceLock, io::Write};
+use std::{fmt::Error, fs::{File, OpenOptions, create_dir_all}, io::Write, path::PathBuf, sync::OnceLock};
 
 use chrono::Local;
 use colored::{ColoredString, Colorize};
@@ -55,6 +55,7 @@ pub fn start () {
 
     LOG_NAME.set(name).unwrap();
     
+    let _ = create_dir_all(LOG_DIR);
     let _ = File::create(path);
 }
 

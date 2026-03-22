@@ -22,7 +22,7 @@ fn main () -> Result<(),Box<dyn Error>>{
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
 
-    let ui: AppWindow = AppWindow::new()?;
+    let ui: MainWindow = MainWindow::new()?;
     ui.run()?;
     Ok(())
 
