@@ -1,13 +1,24 @@
+#cargo-features = ["edition2024"]
+
 [package]
 name = "worlds-reincarnate"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+#mc-libraries
 mc-classic = "0.1.4"
 mc-classic-js = "0.2.5"
 
+#ui
+slint = "1.8.0"
+
 chrono = "0.4.44"
 colored = "3.1.1"
+
 regex = "1.12.3"
-thiserror = "2.0.17"
+
+thiserror = "2.0.18"
+
+[build-dependencies]
+slint-build = "1.8.0"

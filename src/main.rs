@@ -1,5 +1,4 @@
-use std::sync::OnceLock;
-
+use std::{error::Error, sync::OnceLock};
 use chrono::prelude::*;
 
 //mod read;
@@ -10,16 +9,22 @@ mod functions;
 mod world;
 mod log;
 
+slint::include_modules!();
+
 static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
 
-fn main () {
+fn main () -> Result<(),Box<dyn Error>>{
 
     let timestamp: String = Local::now().format("%Y%m%d%H%M%S").to_string();
     TIMESTAMP.set(timestamp).unwrap();
 
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
+
+    let ui: AppWindow = AppWindow::new()?;
+    ui.run()?;
+    Ok(())
 
 /*
     let level = read::read_classic_file(PathBuf::from("input/level.dat"));
