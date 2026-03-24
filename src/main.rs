@@ -1,15 +1,17 @@
-use std::{error::Error, sync::OnceLock};
+use std::{error::Error, process::exit, sync::OnceLock};
 use chrono::prelude::*;
 
 //mod read;
 mod write;
 //mod convert;
 
-mod functions;
-mod world;
 mod log;
+mod version;
+mod world;
 
 slint::include_modules!();
+
+const DEBUG_FLAG: bool = true;
 
 static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
@@ -22,7 +24,29 @@ fn main () -> Result<(),Box<dyn Error>>{
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
 
+    let list = match version::get() {
+        Ok(val) => val,
+        Err(e) => {
+            log::log(2,"Error parsing versions:");
+            log::log(2,format!("{:?}",e));
+            log::close();
+            exit(0);
+        }
+    };
+
+    for edition in list {
+        for version in edition.versions {
+            log::log(-1,format!("Edition: {} Version: {} ID: {}",edition.id,version.display,version.id));
+        }
+    }
+
     let ui: MainWindow = MainWindow::new()?;
+
+    ui.window().on_close_requested(||{
+        log::close();
+        slint::CloseRequestResponse::HideWindow
+    });
+
     ui.run()?;
     Ok(())
 

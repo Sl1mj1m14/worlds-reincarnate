@@ -3,7 +3,7 @@ use std::{fmt::Error, fs::{File, OpenOptions, create_dir_all}, io::Write, path::
 use chrono::Local;
 use colored::{ColoredString, Colorize};
 
-use crate::{DEFAULT_TIMESTAMP, TIMESTAMP};
+use crate::{DEBUG_FLAG, DEFAULT_TIMESTAMP, TIMESTAMP};
 
 const LOG_DIR: &str = "logs";
 const LOG_DEFAULT: &str = "log.txt";
@@ -59,7 +59,9 @@ pub fn start () {
     let _ = File::create(path);
 }
 
-pub fn log (code: u8, input: impl Msg) {
+pub fn log (code: i8, input: impl Msg) {
+    if code == -1 && !DEBUG_FLAG {return}
+
     let mut msg: String = Msg::to_msg(&input);
     let timestamp: String = Local::now().format("%Y-%m-%d %H:%M:%S : ").to_string();
 
@@ -70,11 +72,6 @@ pub fn log (code: u8, input: impl Msg) {
         .append(true)
         .open(path);
 
-    let _ = match log_file {
-        Ok(mut file) => writeln!(file,"{}{}",timestamp,msg),
-        Err(_) => Ok(())
-    };
-
     let msg_colored: ColoredString = match code {
         1 => {
             msg = String::from("WARNING: ") + &msg;
@@ -84,8 +81,22 @@ pub fn log (code: u8, input: impl Msg) {
             msg = String::from("ERROR: ") + &msg;
             msg.red()
         },
+        -1 => {
+            msg = String::from("DEBUG: ") + &msg;
+            msg.truecolor(LIGHT_GREY[0],LIGHT_GREY[1],LIGHT_GREY[2])
+        }
         _ => msg.white()
     };
+
+    let _ = match log_file {
+        Ok(mut file) => writeln!(file,"{}{}",timestamp,msg),
+        Err(_) => Ok(())
+    };
+
     println!("{}{}",timestamp.truecolor(LIGHT_GREY[0],LIGHT_GREY[1],LIGHT_GREY[2]),msg_colored);
+}
+
+pub fn close () {
+    log(0,format!("Ending Session at {}",Local::now().format("%Y-%m-%d %H:%M:%S")))
 }
 

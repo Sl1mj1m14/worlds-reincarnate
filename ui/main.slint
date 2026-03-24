@@ -1,4 +1,21 @@
+import { ListView, Button } from "std-widgets.slint";
+struct Version {
+    name: string,
+    edition: string,
+    samvid: int
+}
+
+component VersionList inherits ListView {
+    rowspan: 2;
+    min-height: 100px;
+    min-width: 50px;
+    horizontal-scrollbar-policy: always-off;
+}
+
 export component MainWindow inherits Window {
+    in property <[Version]> input-versions;
+    in property <[Version]> output-versions;
+    callback set-version(mode: int, edition: string, samvid: int);
 
     title: "Worlds Reincarnate";
 
@@ -8,7 +25,52 @@ export component MainWindow inherits Window {
     min-height: 300px;
     min-width: 200px;
 
+    background: darkgray;
+
     GridLayout {
+        spacing: 5px;
+
+        header := Rectangle {
+            height: 50px;
+            opacity: 25%;
+            colspan: 5;
+            background: green;
+        }
+
+        Text { 
+            text: "Input Version"; 
+            color: white;
+            row: 2;
+            col: 2;
+        }
+
+        input-versions := VersionList {
+            row: 3;
+            col: 2;
+
+            for version in root.input-versions:
+                Button {
+                    text: version.name;
+                    clicked() => {
+                        root.set-version(0, version.edition, version.samvid);
+                    }
+                }
+        }
+
+        Text { 
+            text: "Output Version"; 
+            color: white;
+            row: 2;
+            col: 4;
+        }
+
+        footer := Rectangle {
+            height: 50px;
+            opacity: 25%;
+            colspan: 5;
+            row: 5;
+            background: green;
+        }
 
     }
 }
