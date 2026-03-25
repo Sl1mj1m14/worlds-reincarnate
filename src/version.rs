@@ -1,4 +1,4 @@
-use std::{fs::File, io::{Error,ErrorKind}, path::PathBuf};
+use std::{io::{Error,ErrorKind}, path::PathBuf};
 
 use crate::log::log;
 

@@ -5,17 +5,12 @@ struct Version {
     samvid: int
 }
 
-component VersionList inherits ListView {
-    rowspan: 2;
-    min-height: 100px;
-    min-width: 50px;
-    horizontal-scrollbar-policy: always-off;
-}
-
 export component MainWindow inherits Window {
     in property <[Version]> input-versions;
     in property <[Version]> output-versions;
+
     callback set-version(mode: int, edition: string, samvid: int);
+    callback browse();
 
     title: "Worlds Reincarnate";
 
@@ -44,17 +39,31 @@ export component MainWindow inherits Window {
             col: 2;
         }
 
-        input-versions := VersionList {
+        input-versions := ListView {
+            rowspan: 2;
+            min-height: 100px;
+            min-width: 50px;
+            horizontal-scrollbar-policy: always-off;
             row: 3;
             col: 2;
 
             for version in root.input-versions:
                 Button {
+                    height: 25px;
                     text: version.name;
                     clicked() => {
                         root.set-version(0, version.edition, version.samvid);
                     }
                 }
+        }
+
+        Button {
+            row: 2;
+            col: 3;
+            text: "Browse";
+            clicked() => {
+                root.browse();
+            }
         }
 
         Text { 

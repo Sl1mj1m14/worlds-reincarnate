@@ -8,16 +8,16 @@ edition = "2021"
 mc-classic = "0.1.4"
 mc-classic-js = "0.2.5"
 
-#ui
+#ui & design
 slint = "1.8.0"
-
 chrono = "0.4.44"
 colored = "3.1.1"
 
-#parse
+#parsing
 regex = "1.12.3"
 csv = "1.4.0"
 
+#error handling
 thiserror = "2.0.18"
 
 [build-dependencies]
