@@ -1,5 +1,6 @@
 use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::OnceLock};
 use chrono::prelude::*;
+use rfd;
 
 //mod read;
 mod write;
@@ -16,6 +17,14 @@ const DEBUG_FLAG: bool = true;
 static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
 
+#[derive(Clone)]
+struct MainHandler {
+    input_edition: String,
+    input_version: i32,
+    path: PathBuf,
+    output_edition: String,
+    output_version: i32,
+}
 
 fn main () -> Result<(),Box<dyn Error>>{
 
@@ -38,11 +47,13 @@ fn main () -> Result<(),Box<dyn Error>>{
     };
 
     //Setting defaults for conversion
-    let input_edition = Rc::new(RefCell::new(list[0].id.clone()));
-    let input_version = Rc::new(RefCell::new(list[0].versions[0].id));
-    let mut output_edition = list[0].id.clone();
-    let mut output_version = list[0].versions[0].id;
-    let mut file_path = PathBuf::default();
+    let main_handler = Rc::new(RefCell::new(MainHandler { 
+        input_edition: list[0].id.clone(), 
+        input_version: list[0].versions[0].id, 
+        path: PathBuf::default(), 
+        output_edition: list[0].id.clone(), 
+        output_version: list[0].versions[0].id 
+    }));
 
     //Building window
     let ui: MainWindow = MainWindow::new()?;
@@ -66,27 +77,37 @@ fn main () -> Result<(),Box<dyn Error>>{
     ui.set_input_versions(version_model.clone().into());
     ui.set_output_versions(version_model.clone().into());
 
-    let clone_edition = input_edition.clone();
-    let clone_version = input_version.clone();
     //Handling setting versions
+    let clone_handler = main_handler.clone();
     ui.on_set_version(move |code, edition, version| {
         match code {
             0 => {
-                *clone_edition.borrow_mut() = edition.to_string();
-                *clone_version.borrow_mut() = version;
+                clone_handler.borrow_mut().input_edition = edition.to_string();
+                clone_handler.borrow_mut().input_version = version;
             },
             1 => {
-                //output_edition = edition.to_string();
-                //output_version = version
+                clone_handler.borrow_mut().output_edition = edition.to_string();
+                clone_handler.borrow_mut().output_version = version;
             },
             _ => ()
         }
     });
 
-    let clone_edition = input_edition.clone();
-    let clone_version = input_version.clone();
+    //Handling opening a file
+    let clone_handler = main_handler.clone();
     ui.on_browse(move ||{
-        log::log(-1,format!("Edition is {} and version is {}",*clone_edition.borrow_mut(),*clone_version.borrow_mut()))
+        let edition = clone_handler.borrow_mut().input_edition.clone();
+        let version = clone_handler.borrow_mut().input_version;
+
+        let path = filter_files(edition, version);
+
+        match path {
+            Some(val) => {
+                clone_handler.borrow_mut().path = val.clone();
+                log::log(-1,format!("Opened {}",val.to_string_lossy()))
+            },
+            None => log::log(-1,"No file was opened!")
+        };
     });
 
     //Handling when the program is closed
@@ -98,23 +119,35 @@ fn main () -> Result<(),Box<dyn Error>>{
     ui.run()?;
     Ok(())
 
-/*
-    let level = read::read_classic_file(PathBuf::from("input/level.dat"));
+}
 
-    match level {
-        Ok(value) => {
-            println!("I guess this worked?");
-            let mut name = String::from("");
-            if value.world_data.is_some() {
-                //if value.world_data.unwrap().
+fn filter_files (edition: String, version: i32) -> Option<PathBuf> {
+
+    let mut dialog = rfd::FileDialog::new();
+
+    dialog = match edition.as_str() {
+        version::JAVA_EDITION => {
+            if version <= version::J_PC16 {
+                dialog.add_filter("PreClassic", &["dat"])
+            } else if version <= version::J_C29 {
+                dialog.add_filter("Classic", &["dat"])
+            } else if version <= version::J_C30 {
+                dialog.add_filter("Classic", &["dat","mine"])
+            } else {
+                log::log(1,"Searching for unknown or unsupported version!");
+                rfd::FileDialog::new()
             }
-            println!("World Name is: ")
         },
-        Err(error) => eprintln!("{error}")
-    }
+        _ => {
+            log::log(1,"Searching for unknown or unsupported edition!");
+            rfd::FileDialog::new()
+        }
+    };
 
-    */
-    //mem::drop(session_lock);
+    dialog = dialog.add_filter("Any", &["*"]);
+
+    dialog.pick_file()
+
 }
 
 

@@ -16,6 +16,7 @@ colored = "3.1.1"
 #parsing
 regex = "1.12.3"
 csv = "1.4.0"
+rfd = "0.17.2"
 
 #error handling
 thiserror = "2.0.18"
