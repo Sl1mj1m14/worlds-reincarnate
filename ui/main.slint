@@ -11,6 +11,7 @@ export component MainWindow inherits Window {
 
     callback set-version(mode: int, edition: string, samvid: int);
     callback browse();
+    callback convert();
 
     title: "Worlds Reincarnate";
 
@@ -63,6 +64,15 @@ export component MainWindow inherits Window {
             text: "Browse";
             clicked() => {
                 root.browse();
+            }
+        }
+
+        Button {
+            row: 3;
+            col: 3;
+            text: "Convert";
+            clicked() => {
+                root.convert();
             }
         }
 

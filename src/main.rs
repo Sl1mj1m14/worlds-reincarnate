@@ -2,9 +2,9 @@ use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, syn
 use chrono::prelude::*;
 use rfd;
 
-//mod read;
+mod read;
 mod write;
-//mod convert;
+mod convert;
 
 mod log;
 mod version;
@@ -108,6 +108,21 @@ fn main () -> Result<(),Box<dyn Error>>{
             },
             None => log::log(-1,"No file was opened!")
         };
+    });
+
+    //Handling converting
+    let clone_handler = main_handler.clone();
+    ui.on_convert(move ||{
+        let handles = clone_handler.borrow_mut().clone();
+        if !handles.path.clone().exists() {
+            if handles.path.clone() == PathBuf::default() {
+                log::log(0, "Please choose a file before converting")
+            } else {
+                log::log(2, format!("File at {} no longer exists",handles.path.clone().to_str().unwrap_or_default()))
+            }
+            return
+        }
+        convert::convert(handles.input_edition, handles.input_version, handles.output_edition, handles.output_version, handles.path);
     });
 
     //Handling when the program is closed

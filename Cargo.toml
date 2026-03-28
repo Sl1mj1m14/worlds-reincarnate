@@ -16,7 +16,10 @@ colored = "3.1.1"
 #parsing
 regex = "1.12.3"
 csv = "1.4.0"
+
+#file handling
 rfd = "0.17.2"
+flate2 = "1.1.9"
 
 #error handling
 thiserror = "2.0.18"
