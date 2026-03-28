@@ -9,6 +9,7 @@ mod convert;
 mod log;
 mod version;
 mod world;
+mod functions;
 
 slint::include_modules!();
 

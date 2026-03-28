@@ -1,21 +1,16 @@
+use std::collections::HashMap;
+
 #[derive(Default)]
 pub struct World {
     pub edition: String,
     pub version: i32,
 
-    pub world_data: Option<Vec<Tag>>,
-    pub player_data: Option<Vec<Tag>>,
+    pub world_data: Option<HashMap<String,Value>>,
+    pub player_data: Option<HashMap<String,Value>>,
 
     pub is_chunked: bool,
     pub blocks: Option<BlockArray>,
     pub entities: Option<Vec<Entity>>
-}
-
-#[derive(Default,Clone)]
-pub struct Tag {
-    pub key: String,
-    pub id: String,
-    pub value: Value
 }
 
 pub trait Generic {
@@ -82,7 +77,7 @@ impl Generic for Vec<Value> {
     }
 }
 
-impl Generic for Box<Tag> {
+impl Generic for Box<HashMap<String,Value>> {
     fn set (&self) -> Value {
         Value::Compound(self.clone())
     }
@@ -120,7 +115,7 @@ pub enum Value {
     Double(f64),
     String(String),
     List(Vec<Value>),
-    Compound(Box<Tag>),
+    Compound(Box<HashMap<String,Value>>),
     ByteArray(Vec<i8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>)
@@ -135,25 +130,6 @@ impl Default for Value {
 impl Value {
     pub fn new(generic: impl Generic) -> Value {
         generic.set()
-    }
-
-    fn get(&self) -> Box<dyn Generic> {
-        match self {
-            Value::Byte(x) => Box::new(*x),
-            Value::UByte(x) => Box::new(*x),
-            Value::Boolean(x) => Box::new(*x),
-            Value::Short(x) => Box::new(*x),
-            Value::Int(x) => Box::new(*x),
-            Value::Long(x) => Box::new(*x),
-            Value::Float(x) => Box::new(*x),
-            Value::Double(x) => Box::new(*x),
-            Value::String(x) => Box::new(x.clone()),
-            Value::List(x) => Box::new(x.to_vec()),
-            Value::Compound(x) => Box::new(x.clone()),
-            Value::ByteArray(x) => Box::new(x.to_vec()),
-            Value::IntArray(x) => Box::new(x.to_vec()),
-            Value::LongArray(x) => Box::new(x.to_vec())
-        }
     }
 }
 
@@ -176,11 +152,11 @@ impl Default for BlockArray {
 #[derive(Default)]
 pub struct Block {
     pub id: Value,
-    pub block_data: Option<Vec<Tag>>
+    pub block_data: Option<HashMap<String,Value>>
 }
 
 #[derive(Default)]
 pub struct Entity {
     pub id: Value,
-    pub entity_data: Option<Vec<Tag>>
+    pub entity_data: Option<HashMap<String,Value>>
 }
