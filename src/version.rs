@@ -9,7 +9,8 @@ pub const JAVA_EDITION: &str = "java";
 
 pub const J_PC16: i32 = 40; //pc-161148
 pub const J_C12: i32 = 10110; //c0.0.12a_03
-pub const J_C13: i32 = 10150; //c0.0.13a_03-launcher
+pub const J_C13: i32 = 10140; //c0.0.13a-launcher
+pub const J_C13_03: i32 = 10150; //c0.0.13a_03-launcher
 pub const J_C29: i32 = 10780; //c0.29_02
 pub const J_C30: i32 = 10810; //c0.30c-launcher
 

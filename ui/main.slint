@@ -83,6 +83,25 @@ export component MainWindow inherits Window {
             col: 4;
         }
 
+        output-versions := ListView {
+            rowspan: 2;
+            min-height: 100px;
+            min-width: 50px;
+            horizontal-scrollbar-policy: always-off;
+            row: 3;
+            col: 4;
+
+            for version in root.output-versions:
+                Button {
+                    height: 25px;
+                    text: version.name;
+                    clicked() => {
+                        root.set-version(1, version.edition, version.samvid);
+                    }
+                }
+        }
+
+
         footer := Rectangle {
             height: 50px;
             opacity: 25%;

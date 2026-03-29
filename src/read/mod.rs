@@ -7,7 +7,7 @@ pub fn read (edition: String, version: i32, path: PathBuf) -> Option<World> {
         JAVA_EDITION => {
             if version <= J_C12 {
                 read_preclassic(path)
-            } else if version <= J_C13 {
+            } else if version <= J_C13_03 {
                 read_early_classic(path)
             } else {
                 log(2, "Unrecognized or unsupported version!");
@@ -112,6 +112,9 @@ fn read_early_classic (path: PathBuf) -> Option<World> {
     let mut world: World = World::default();
     world.world_data = Some(world_data);
     world.blocks = Some(block_array);
+    world.edition = JAVA_EDITION.to_string();
+    world.version = J_C13_03;
+    log(0,"Assuming latest early classic version");
 
     Some(world)
 }
