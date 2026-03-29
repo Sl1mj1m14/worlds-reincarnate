@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Default)]
+#[derive(Default,Clone)]
 pub struct World {
     pub edition: String,
     pub version: i32,
@@ -133,6 +133,7 @@ impl Value {
     }
 }
 
+#[derive(Clone)]
 pub struct BlockArray {
     pub format: [String; 3], //The order of iterating through the dimensions, should only contain "+/-" xyz
     pub dims: [i32; 3], //World dimensions in xyz format
@@ -149,13 +150,13 @@ impl Default for BlockArray {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Block {
     pub id: Value,
     pub block_data: Option<HashMap<String,Value>>
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Entity {
     pub id: Value,
     pub entity_data: Option<HashMap<String,Value>>

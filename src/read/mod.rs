@@ -10,10 +10,14 @@ pub fn read (edition: String, version: i32, path: PathBuf) -> Option<World> {
             } else if version <= J_C13 {
                 read_early_classic(path)
             } else {
+                log(2, "Unrecognized or unsupported version!");
                 None
             }
         },
-        _ => None
+        _ => {
+                log(2, "Unrecognized or unsupported edition!");
+                None
+        }
     }
 }
 

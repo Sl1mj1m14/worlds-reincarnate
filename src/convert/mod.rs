@@ -1,6 +1,8 @@
 use std::{default, path::PathBuf};
 
-use crate::{log::log, read, world::{self, Value}};
+use crate::{log::log, read, world::{self, Value}, write};
+
+mod blocks;
 
 pub fn convert(input_edition: String, input_version: i32, output_edition: String, output_version: i32, path: PathBuf) {
     log(0,"Reading world...");
@@ -12,17 +14,16 @@ pub fn convert(input_edition: String, input_version: i32, output_edition: String
             return
         }
     };
-    match world.world_data {
-        Some(data) => {
-            let world_name: String = match data["name"].clone() {
-                Value::String(val) => val,
-                _ => String::default()
-            };
-            log(-1,format!("World name is {}",world_name));
-        },
-        None => log(-1,format!("There is no world data"))
-    }
+
     log(0,"Converting world...");
+    log(0,"Or rather, pretending to...");
+    //Implement converting you fool...
+
+    log(0,"Writing world...");
+    match write::write(world) {
+        1 => log(0,"World Converted!"),
+        _ => log(2,"Writing failed")
+    }
 }
 
 

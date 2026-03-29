@@ -1,7 +1,7 @@
-use std::{collections::HashMap, io::BufRead, num::ParseIntError};
+use crate::world::{Block, BlockArray};
 
 pub fn rotate_array (input_array: BlockArray, output_format: [String; 3]) -> BlockArray {
-    let mut output_blocks: Vec<Block> = vec![Block::Byte(0); input_array.blocks.len()];
+    let mut output_blocks: Vec<Block> = vec![Block::default(); input_array.blocks.len()];
 
     /******************************************
     Format of arrays used in this conversion are as follows:
