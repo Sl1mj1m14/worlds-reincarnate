@@ -130,10 +130,7 @@ fn write_early_classic(world: World) -> i32 {
     bytes.extend_from_slice(&len.to_be_bytes());
     bytes.extend_from_slice(name.as_bytes());
 
-    let mut creator = match world.version {
-        J_C13 => "noname".to_string(),
-        _ => "unknown".to_string()
-    };
+    let mut creator = "unknown".to_string();
     if world_data.clone().contains_key("creator") {
         match &world_data["creator"] {
             Value::String(s) => creator = s.to_string(),

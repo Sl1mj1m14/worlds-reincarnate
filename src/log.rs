@@ -85,7 +85,10 @@ pub fn log (code: i8, input: impl Msg) {
             msg = String::from("DEBUG: ") + &msg;
             msg.truecolor(LIGHT_GREY[0],LIGHT_GREY[1],LIGHT_GREY[2])
         }
-        _ => msg.white()
+        _ => {
+            msg = String::from("INFO: ") + &msg;
+            msg.white()
+        }
     };
 
     let _ = match log_file {
