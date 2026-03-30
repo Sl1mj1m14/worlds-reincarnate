@@ -44,7 +44,7 @@ fn main () -> Result<(),Box<dyn Error>>{
             log::log(2,"Error parsing versions:");
             log::log(2,format!("{}",e));
             log::close();
-            exit(0);
+            exit(1);
         }
     };
 
