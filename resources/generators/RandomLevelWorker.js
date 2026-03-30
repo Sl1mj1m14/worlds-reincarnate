@@ -741,5 +741,9 @@ function startGeneration (obj) { //{worldSize: worldSize, seed: props.seed, seed
 	var depth = obj.worldSize;
 	var height = 64;
 	level.createLevel(obj.seed, width, depth, height);
-    return level.tiles
 }
+
+self.addEventListener('message', function(e) {
+  //console.log("worker get "+e.data);
+  startGeneration(e.data)
+}, false);

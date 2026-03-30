@@ -16,10 +16,14 @@ colored = "3.1.1"
 #parsing
 regex = "1.12.3"
 csv = "1.4.0"
+serde = "1.0.228"
 
 #file handling
 rfd = "0.17.2"
 flate2 = "1.1.9"
+
+#cross language scripting
+v8 = "147.0.0"
 
 [build-dependencies]
 slint-build = "1.8.0"

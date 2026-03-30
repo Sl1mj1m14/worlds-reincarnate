@@ -5,6 +5,7 @@ use rfd;
 mod read;
 mod write;
 mod convert;
+mod generate;
 
 mod log;
 mod version;
@@ -124,6 +125,11 @@ fn main () -> Result<(),Box<dyn Error>>{
             return
         }
         convert::convert(handles.input_edition, handles.input_version, handles.output_edition, handles.output_version, handles.path);
+    });
+
+    ui.on_test(move ||{
+        generate::javascript(42,128);
+        generate::javascript(420,128);
     });
 
     //Handling when the program is closed
