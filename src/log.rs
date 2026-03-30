@@ -56,7 +56,10 @@ pub fn start () {
     LOG_NAME.set(name).unwrap();
     
     let _ = create_dir_all(LOG_DIR);
-    let _ = File::create(path);
+    match File::create(path) {
+        Ok(_) => (),
+        Err(_) => panic!("Failed to start logging!")
+    }
 }
 
 pub fn log (code: i8, input: impl Msg) {
