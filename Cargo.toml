@@ -4,10 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-#mc-libraries
-mc-classic = "0.1.4"
-mc-classic-js = "0.2.5"
-
 #ui & design
 slint = "1.8.0"
 chrono = "0.4.44"
