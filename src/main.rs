@@ -4,15 +4,17 @@ use rfd;
 
 use crate::functions::{Dir, get_general_dir};
 
-mod read;
-mod write;
+//mod read;
+//mod write;
 mod convert;
-mod generate;
+//mod generate;
 
 mod log;
 mod version;
 mod world;
 mod functions;
+
+use crate::convert::generate;
 
 slint::include_modules!();
 

@@ -1,8 +1,11 @@
 use std::path::PathBuf;
 
-use crate::{log::log, read, world::{self, Value}, write};
+use crate::{log::log, world::{self, Value}};
 
-mod blocks;
+mod read;
+mod write;
+mod block;
+mod generate;
 
 pub fn convert(input_edition: String, input_version: i32, input_path: PathBuf, output_edition: String, output_version: i32, output_path: PathBuf) {
     log(0,"Reading world...");
