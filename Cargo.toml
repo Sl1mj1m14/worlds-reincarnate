@@ -20,6 +20,7 @@ serde = "1.0.228"
 
 #file handling
 rfd = "0.17.2"
+directories = "6.0.0"
 flate2 = "1.1.9"
 
 #cross language scripting

@@ -2,6 +2,8 @@ use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, syn
 use chrono::prelude::*;
 use rfd;
 
+use crate::functions::{Dir, get_general_dir};
+
 mod read;
 mod write;
 mod convert;
@@ -124,7 +126,17 @@ fn main () -> Result<(),Box<dyn Error>>{
             }
             return
         }
-        convert::convert(handles.input_edition, handles.input_version, handles.output_edition, handles.output_version, handles.path);
+
+        let out_dir = get_general_dir(Dir::Documents);
+        let output_path = match rfd::FileDialog::new().set_directory(out_dir).set_title("Save Folder").pick_folder() {
+            Some(p) => p,
+            None => {
+                log::log(1,"Unable to convert without choosing output directory, returning");
+                return
+            }
+        };
+
+        convert::convert(handles.input_edition, handles.input_version, handles.path, handles.output_edition, handles.output_version, output_path);
     });
 
     ui.on_test(move ||{

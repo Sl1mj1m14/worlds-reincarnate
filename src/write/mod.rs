@@ -2,17 +2,14 @@ use std::{collections::HashMap, fs::{File, OpenOptions, create_dir_all, remove_f
 
 use flate2::{Compression, write::GzEncoder};
 
-use crate::{log::log, version::{J_C12, J_C13, J_C13_03, JAVA_EDITION}, world::{Value, World}};
+use crate::{log::log, version::{J_C12, J_C13_03, JAVA_EDITION}, world::{Value, World}};
 
-const OUTPUT_DIR: &str = "output";
-
-pub fn write (world: World) -> i32 {
-    let dir: PathBuf = [OUTPUT_DIR].iter().collect();
-    if !dir.exists() {
-        match create_dir_all(dir) {
+pub fn write (world: World, path: PathBuf) -> i32 {
+    if !path.exists() {
+        match create_dir_all(path.clone()) {
             Ok(_) => (),
             Err(e) => {
-                log(2, "Failed to create output directory");
+                log(2, "Failed to find output directory");
                 log(2,format!("{e}"));
                 return 0
             }
@@ -23,9 +20,9 @@ pub fn write (world: World) -> i32 {
     match world.edition.as_str() {
         JAVA_EDITION => {
             if world.version <= J_C12 {
-                write_preclassic(world)
+                write_preclassic(world, path.clone())
             } else if world.version <= J_C13_03 {
-                write_early_classic(world)
+                write_early_classic(world, path.clone())
             } else {
                 log(2, "Unrecognized or unsupported version!");
                 0
@@ -38,8 +35,10 @@ pub fn write (world: World) -> i32 {
     }
 }
 
-fn write_preclassic(world: World) -> i32 {
-    let path: PathBuf = [OUTPUT_DIR,"level.dat"].iter().collect();
+fn write_preclassic(world: World, dir: PathBuf) -> i32 {
+    let mut path: PathBuf = dir;
+    path.push("level");
+    path.set_extension("dat");
 
     if path.exists() {
         log(1,"File already exists in output location!");
@@ -95,9 +94,13 @@ fn write_preclassic(world: World) -> i32 {
     return 1
 }
 
-fn write_early_classic(world: World) -> i32 {
-    let path: PathBuf = [OUTPUT_DIR,"level.dat"].iter().collect();
+fn write_early_classic(world: World, dir: PathBuf) -> i32 {
+    let mut path: PathBuf = dir.clone();
+    path.push("level");
+    path.set_extension("dat");
 
+    log(-1,format!("Original is {}",dir.to_string_lossy()));
+    log(-1,format!("Modified is {}",path.to_string_lossy()));
     if path.exists() {
         log(1,"File already exists in output location!");
         log(1,format!("Replacing file at {}",path.clone().to_str().unwrap_or_default()));

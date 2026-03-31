@@ -3,6 +3,24 @@ use flate2::read::GzDecoder;
 
 use crate::log::log;
 
+pub enum Dir {
+    Home,
+    Documents
+}
+
+pub fn get_general_dir(dir: Dir) -> PathBuf {
+    match dir {
+        Dir::Home => {
+            let u = directories::UserDirs::new().unwrap();
+            u.home_dir().to_path_buf()
+        },
+        Dir::Documents => {
+            let u = directories::UserDirs::new().unwrap();
+            u.document_dir().unwrap().to_path_buf()
+        }
+    }
+}
+
 pub fn path2stream (path: PathBuf) -> Option<Vec<u8>> {
     let stream: Vec<u8> = match fs::read(path) {
         Ok(val) => val,
