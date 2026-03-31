@@ -2,17 +2,15 @@ use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, syn
 use chrono::prelude::*;
 use rfd;
 
-use crate::functions::{Dir, get_general_dir};
-
-//mod read;
-//mod write;
-mod convert;
-//mod generate;
+//use crate::functions::{Dir, get_general_dir};
 
 mod log;
+mod functions;
+mod file;
+
 mod version;
 mod world;
-mod functions;
+mod convert;
 
 use crate::convert::generate;
 
@@ -105,7 +103,7 @@ fn main () -> Result<(),Box<dyn Error>>{
         let edition = clone_handler.borrow_mut().input_edition.clone();
         let version = clone_handler.borrow_mut().input_version;
 
-        let path = filter_files(edition, version);
+        let path = file::filter_files(edition, version);
 
         match path {
             Some(val) => {
@@ -129,7 +127,7 @@ fn main () -> Result<(),Box<dyn Error>>{
             return
         }
 
-        let out_dir = get_general_dir(Dir::Documents);
+        let out_dir = file::get_general_dir(file::Dir::Documents);
         let output_path = match rfd::FileDialog::new().set_directory(out_dir).set_title("Save Folder").pick_folder() {
             Some(p) => p,
             None => {
@@ -156,50 +154,3 @@ fn main () -> Result<(),Box<dyn Error>>{
     Ok(())
 
 }
-
-fn filter_files (edition: String, version: i32) -> Option<PathBuf> {
-
-    let mut dialog = rfd::FileDialog::new();
-
-    dialog = match edition.as_str() {
-        version::JAVA_EDITION => {
-            if version <= version::J_PC16 {
-                dialog.add_filter("PreClassic", &["dat"])
-            } else if version <= version::J_C29 {
-                dialog.add_filter("Classic", &["dat"])
-            } else if version <= version::J_C30 {
-                dialog.add_filter("Classic", &["dat","mine"])
-            } else {
-                log::log(1,"Searching for unknown or unsupported version!");
-                rfd::FileDialog::new()
-            }
-        },
-        _ => {
-            log::log(1,"Searching for unknown or unsupported edition!");
-            rfd::FileDialog::new()
-        }
-    };
-
-    dialog = dialog.add_filter("Any", &["*"]);
-
-    dialog.pick_file()
-
-}
-
-
-
-/*
-Blocks
-Entities
-Items
-Player
-World Settings
-
-
-
-
-
-*/
-
-
-

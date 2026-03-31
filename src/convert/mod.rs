@@ -5,7 +5,7 @@ use crate::{log::log, world::{self, Value}};
 mod read;
 mod write;
 mod block;
-mod generate;
+pub(crate) mod generate;
 
 pub fn convert(input_edition: String, input_version: i32, input_path: PathBuf, output_edition: String, output_version: i32, output_path: PathBuf) {
     log(0,"Reading world...");
