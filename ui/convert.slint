@@ -1,0 +1,105 @@
+import { Button, ComboBox, ListView } from "std-widgets.slint";
+import { Theme } from "themes/theme.slint";
+import { HeaderText } from "components.slint";
+
+struct Version {
+    display: string,
+    value: int
+}
+
+export global Versions {
+    in-out property <int> js-index: 1;
+
+    in-out property <string> input-edition: "JAVA";
+    in-out property <string> input-version: "c0.0.13a";
+    in-out property <[string]> input-editions;
+    in-out property <[Version]> input-versions;
+
+    in-out property <string> output-edition: "CLASSIC JS";
+    in-out property <string> output-version: "cjs-4e4e005077c1d4940468";
+    in-out property <[string]> output-editions;
+    in-out property <[Version]> output-versions;
+
+    callback set-version(mode: int, edition: int, samvid: int);
+    callback set-edition(mode: int, edition: int);
+}
+
+export component ConvertScreen {
+    height: 525px;
+
+    VerticalLayout {
+        settings := Rectangle {
+            height: 25px;
+            background: red;
+        }
+
+        header := Rectangle {
+            height: 100px;
+            background: blue;
+            HorizontalLayout {
+                spacing: 15px;
+
+                HeaderText {
+                    text: Versions.input-edition + "    " + Versions.input-version;
+                }
+
+                Button {
+                    width: 150px;
+                    text: "[PLACEHOLDER]";
+
+                }
+
+                HeaderText {
+                    text: Versions.output-edition + "    " + Versions.output-version;
+                }
+            }
+        }
+
+        body := Rectangle {
+            background: lime;
+
+            HorizontalLayout {
+                input := VerticalLayout {
+                    padding: 15px;
+
+                    Text {
+                        text: "INPUT";
+                    }
+
+                    Text {
+                        text: "Choose Edition:";
+                    }
+
+                    input-edition-box := ComboBox {
+                        model: Versions.input-editions;
+                        selected(_) => {
+                            Versions.set-edition(0, input-edition-box.current-index);
+                        }
+                    }
+
+                    Text {
+                        text: "Select Version:";
+                    }
+
+                    input-version-list := ListView {
+                        min-height: 100px;
+                        horizontal-scrollbar-policy: always-off;
+
+                        for version in Versions.input-versions:
+                            Button {
+                                height: 25px;
+                                text: version.display;
+                                clicked() => {
+                                    Versions.set-version(0, input-edition-box.current-index, version.value);
+                                }
+                            }
+                    }
+
+                    if (input-edition-box.current-index == Version.js-index) : Text {
+                        //Javascript format and website handling
+                    }
+                }
+            }
+        }
+    }
+}
