@@ -12,7 +12,7 @@ mod version;
 mod world;
 mod convert;
 
-use crate::{file::{Argument, JSFormat, JSUrl}, version::Edition};
+use crate::{file::{Argument, JSFormat, JSUrl, filter_files}, version::Edition};
 
 slint::include_modules!();
 
@@ -226,26 +226,37 @@ fn main () -> Result<(),Box<dyn Error>>{
             }
         });
 
+        //Handling browsing for a file
+        let clone_input = input_handler.clone();
+
+        ui.global::<Versions>().on_browse(move || {
+            let edition = clone_input.borrow_mut().edition.clone();
+            let version = clone_input.borrow_mut().version;
+            let args = clone_input.borrow_mut().args.clone();
+
+            if edition == String::default() || version == i32::default() {
+                log::log(1, "Unable to browse for file until a version & edition are set!");
+                return
+            }
+
+            match filter_files(edition, version, args) {
+                Some(f) => {
+                    clone_input.borrow_mut().path = f.clone();
+                    log::log(-1,format!("Opened path at {}",f.to_string_lossy()))
+                },
+                None => log::log(0, "No file chosen")
+            }
+        });
+
+        //Handling when the program is closed
+        ui.window().on_close_requested(||{
+            log::close();
+            slint::CloseRequestResponse::HideWindow
+        });
+
         ui.run().unwrap();
     });
 
-
-    //Handling opening a file
-    /*let clone_handler = main_handler.clone();
-    ui.on_browse(move ||{
-        let edition = clone_handler.borrow_mut().input_edition.clone();
-        let version = clone_handler.borrow_mut().input_version;
-
-        let path = file::filter_files(edition, version);
-
-        match path {
-            Some(val) => {
-                clone_handler.borrow_mut().path = val.clone();
-                log::log(-1,format!("Opened {}",val.to_string_lossy()))
-            },
-            None => log::log(-1,"No file was opened!")
-        };
-    });*/
 
     //Handling converting
     /*let clone_handler = main_handler.clone();
@@ -271,12 +282,6 @@ fn main () -> Result<(),Box<dyn Error>>{
 
         convert::convert(handles.input_edition, handles.input_version, handles.path, handles.output_edition, handles.output_version, output_path);
     });*/
-
-    //Handling when the program is closed
-    ui.window().on_close_requested(||{
-        log::close();
-        slint::CloseRequestResponse::HideWindow
-    });
 
     Ok(())
 
