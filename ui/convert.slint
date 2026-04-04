@@ -82,9 +82,10 @@ component Input inherits VerticalLayout {
 
     input-edition-box := ComboBox {
         model: Versions.editions;
-        selected(_) => {
-            debug("The callback is being entered");
+        selected(val) => {
             Versions.set-edition(0, input-edition-box.current-index);
+            Versions.input-edition = val;
+            Versions.input-version = "";
         }
     }
 
@@ -100,6 +101,8 @@ component Input inherits VerticalLayout {
                 text: version.display;
                 clicked() => {
                     Versions.set-version(0, input-edition-box.current-index, version.value);
+                    Versions.input-edition = input-edition-box.current-value;
+                    Versions.input-version = version.display;
                 }
             }
     }
@@ -134,8 +137,10 @@ component Output inherits VerticalLayout {
 
     output-edition-box := ComboBox {
         model: Versions.editions;
-        selected(_) => {
+        selected(val) => {
             Versions.set-edition(0, output-edition-box.current-index);
+            Versions.output-edition = val;
+            Versions.output-version = "";
         }
     }
 
@@ -151,6 +156,8 @@ component Output inherits VerticalLayout {
                 text: version.display;
                 clicked() => {
                     Versions.set-version(0, output-edition-box.current-index, version.value);
+                    Versions.output-edition = output-edition-box.current-value;
+                    Versions.output-version = version.display;
                 }
             }
     }

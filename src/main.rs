@@ -11,7 +11,7 @@ mod version;
 mod world;
 mod convert;
 
-use crate::{file::Argument, version::Edition};
+use crate::{file::Argument, file::JSFormat, version::Edition};
 
 slint::include_modules!();
 
@@ -42,11 +42,11 @@ fn main () -> Result<(),Box<dyn Error>>{
     let output_handler: Rc<RefCell<Handler>> = Rc::new(RefCell::new(Handler::default()));
     let all_editions: Arc<Mutex<Vec<Edition>>> = Arc::new(Mutex::new(Vec::new()));
 
-    //Launching window
+    //Creating window
     let ui: MainWindow = MainWindow::new()?;
     ui.set_state(State::Load);
-    let ui_weak = ui.as_weak();
 
+    let ui_weak = ui.as_weak();
     let clone_editions = all_editions.clone();
     thread::scope(|s| {
         s.spawn(|| {
@@ -69,8 +69,6 @@ fn main () -> Result<(),Box<dyn Error>>{
                 log::close();
                 exit(1);
             }
-
-            thread::sleep(Duration::from_secs(5));
 
             //Building lists and menus for the ui
             let mut ui_edition_list: Vec<SharedString> = Vec::new();
@@ -118,9 +116,7 @@ fn main () -> Result<(),Box<dyn Error>>{
             let clone_editions = clone_editions.lock().unwrap();
 
             let i = ((e_index.abs() + e_index)/2) as usize; //Index can return -1, this just changes it to 0
-
             let id = (*clone_editions)[i].id.clone();
-            let display = (*clone_editions)[i].display.clone();
 
             if (code == 0 && clone_input.borrow_mut().edition == id) || (code == 1 && clone_output.borrow_mut().edition == id) || code > 1 {return}
             
@@ -137,11 +133,12 @@ fn main () -> Result<(),Box<dyn Error>>{
                     clone_input.borrow_mut().edition = (*clone_editions)[i].id.clone();
 
                     ui.global::<Versions>().set_input_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
-                    ui.global::<Versions>().set_input_edition(display.into());
-                    ui.global::<Versions>().set_input_version(SharedString::default());
 
-                    if id == version::JAVASCRIPT_EDITION {ui.global::<Versions>().set_input_state(version::JAVASCRIPT_EDITION.into());}
-                    else {ui.global::<Versions>().set_input_state(SharedString::default());}
+                    //Handling arguments
+                    if id == version::JAVASCRIPT_EDITION {
+                        clone_input.borrow_mut().args = Some(vec![Argument::JSFormat(JSFormat::Raw)]);
+                        ui.global::<Versions>().set_input_state(version::JAVASCRIPT_EDITION.into());
+                    } else {ui.global::<Versions>().set_input_state(SharedString::default());}
 
                 },
                 1 => {
@@ -150,11 +147,38 @@ fn main () -> Result<(),Box<dyn Error>>{
                     clone_output.borrow_mut().edition = (*clone_editions)[i].id.clone();
 
                     ui.global::<Versions>().set_output_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
-                    ui.global::<Versions>().set_output_edition(display.into());
-                    ui.global::<Versions>().set_output_version(SharedString::default());
 
-                    if id == version::JAVASCRIPT_EDITION {ui.global::<Versions>().set_output_state(version::JAVASCRIPT_EDITION.into());}
-                    else {ui.global::<Versions>().set_output_state(SharedString::default());}
+                    //Handling arguments
+                    if id == version::JAVASCRIPT_EDITION {
+                        clone_output.borrow_mut().args = Some(vec![Argument::JSFormat(JSFormat::Raw)]);
+                        ui.global::<Versions>().set_output_state(version::JAVASCRIPT_EDITION.into());
+                    } else {ui.global::<Versions>().set_output_state(SharedString::default());}
+                },
+                _ => return
+            }
+        });
+
+        //Handling updating version
+        let clone_input = input_handler.clone();
+        let clone_output = output_handler.clone();
+        let clone_editions = all_editions.clone();
+        let ui_weak = ui.as_weak();
+        ui.global::<Versions>().on_set_version(move |code, e_index, version| {
+            log::log(-1, "Attempting to change version");
+            let _ui = ui_weak.unwrap(); //Will be used in the future with certain states
+            let clone_editions = clone_editions.lock().unwrap();
+
+            let i = ((e_index.abs() + e_index)/2) as usize; //Index can return -1, this just changes it to 0
+            let edition = (*clone_editions)[i].id.clone();
+
+            match code {
+                0 => {
+                    clone_input.borrow_mut().version = version;
+                    clone_input.borrow_mut().edition = edition;
+                },
+                1 => {
+                    clone_output.borrow_mut().version = version;
+                    clone_output.borrow_mut().edition = edition;
                 },
                 _ => return
             }
@@ -163,24 +187,6 @@ fn main () -> Result<(),Box<dyn Error>>{
         ui.run().unwrap();
     });
 
-    
-    
-
-    //Handling setting versions
-    /*let clone_handler = main_handler.clone();
-    ui.on_set_version(move |code, edition, version| {
-        match code {
-            0 => {
-                clone_handler.borrow_mut().input_edition = edition.to_string();
-                clone_handler.borrow_mut().input_version = version;
-            },
-            1 => {
-                clone_handler.borrow_mut().output_edition = edition.to_string();
-                clone_handler.borrow_mut().output_version = version;
-            },
-            _ => ()
-        }
-    });*/
 
     //Handling opening a file
     /*let clone_handler = main_handler.clone();

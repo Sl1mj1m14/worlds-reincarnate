@@ -23,8 +23,8 @@ pub enum Dir {
 
 #[derive(Clone)]
 pub enum Argument {
-    JSFormat,
-    JSUrl
+    JSFormat(JSFormat),
+    JSUrl(JSUrl)
 }
 
 #[derive(Clone)]
