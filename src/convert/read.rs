@@ -1,8 +1,12 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{functions::*, log::log, version::*, world::*};
+use crate::{Handler, functions::*, log::log, version::*, world::*};
 
-pub fn read (edition: String, version: i32, path: PathBuf) -> Option<World> {
+pub fn read (handler: Handler) -> Option<World> {
+    let edition = handler.edition.clone();
+    let version = handler.version;
+    let path = handler.path.clone();
+
     match edition.as_str() {
         JAVA_EDITION => {
             if version <= J_C12 {

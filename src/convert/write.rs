@@ -2,9 +2,9 @@ use std::{collections::HashMap, fs::{File, OpenOptions, create_dir_all, remove_f
 
 use flate2::{Compression, write::GzEncoder};
 
-use crate::{log::log, version::{J_C12, J_C13_03, JAVA_EDITION}, world::{Value, World}};
+use crate::{file::Argument, log::log, version::{J_C12, J_C13_03, JAVA_EDITION}, world::{Value, World}};
 
-pub fn write (world: World, path: PathBuf) -> i32 {
+pub fn write (world: World, path: PathBuf, args: Option<Vec<Argument>>) -> i32 {
     if !path.exists() {
         match create_dir_all(path.clone()) {
             Ok(_) => (),

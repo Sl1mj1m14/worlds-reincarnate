@@ -8,11 +8,11 @@ mod block;
 pub(crate) mod generate;
 
 pub fn convert(input: Handler, output: Handler) {
-    /*log(0,"Reading world...");
-    let mut world = match read::read(input_edition, input_version, input_path.clone()) {
+    log(0,"Reading world...");
+    let mut world = match read::read(input.clone()) {
         Some(val) => val,
         None => {
-            log(2, format!("Failed to read file at {}",input_path.clone().to_str().unwrap_or_default()));
+            log(2, format!("Failed to read file at {}",input.path.clone().to_str().unwrap_or_default()));
             log(0, "Returning...");
             return
         }
@@ -23,10 +23,10 @@ pub fn convert(input: Handler, output: Handler) {
     //Implement converting you fool...
 
     log(0,"Writing world...");
-    match write::write(world, output_path) {
+    match write::write(world, output.path, output.args) {
         1 => log(0,"World Converted!"),
         _ => log(2,"Writing failed")
-    }*/
+    }
 }
 
 
