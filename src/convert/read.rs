@@ -181,7 +181,6 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
         JSFormat::Firefox => {
             struct Data {
                 key: String,
-                utf16_length: i32,
                 value: Vec<u8>
             }
 
@@ -199,7 +198,7 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
                 }
             };
 
-            let mut stmt = match conn.prepare("SELECT key, utf16_length, value FROM data;") {
+            let mut stmt = match conn.prepare("SELECT key, value FROM data;") {
                 Ok(s) => s,
                 Err(e) => {
                     log(1, "SQL Parsing Error");
@@ -211,8 +210,7 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
             let table = match stmt.query_map([], |row| Ok(
                 Data {
                     key: row.get(0).unwrap(),
-                    utf16_length: row.get(1).unwrap(),
-                    value: row.get(2).unwrap(),
+                    value: row.get(2).unwrap()
                 }
             )) {
                 Ok(t) => t,
