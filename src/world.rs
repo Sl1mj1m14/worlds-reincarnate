@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+use serde_json::Value as JValue;
+
+use crate::log::log;
+
 #[derive(Default,Clone)]
 pub struct World {
     pub edition: String,
@@ -50,6 +54,12 @@ impl Generic for i32 {
 impl Generic for i64 {
     fn set (&self) -> Value {
         Value::Long(*self)
+    }
+}
+
+impl Generic for u64 {
+    fn set (&self) -> Value {
+        Value::ULong(*self)
     }
 }
 
@@ -111,6 +121,7 @@ pub enum Value {
     Short(i16),
     Int(i32),
     Long(i64),
+    ULong(u64),
     Float(f32),
     Double(f64),
     String(String),
@@ -118,18 +129,140 @@ pub enum Value {
     Compound(Box<HashMap<String,Value>>),
     ByteArray(Vec<i8>),
     IntArray(Vec<i32>),
-    LongArray(Vec<i64>)
+    LongArray(Vec<i64>),
+    Null
 }
 
 impl Default for Value {
     fn default() -> Self {
-        Value::Byte(0)
+        Value::Null
     }
 }
 
 impl Value {
     pub fn new(generic: impl Generic) -> Value {
         generic.set()
+    }
+
+    pub fn json_to_value(jvalue: JValue) -> Value {
+        match jvalue {
+            JValue::Bool(b) => Value::Boolean(b),
+            JValue::Number(n) => {
+                if n.is_i64() { return Value::Long(n.as_i64().unwrap()) }
+                else if n.is_u64() { return Value::ULong(n.as_u64().unwrap()) }
+                else if n.is_f64() { return Value::Double(n.as_f64().unwrap()) }
+                else { return Value::Null }
+            },
+            JValue::String(s) => Value::String(s),
+            JValue::Array(a) => {
+                let mut new: Vec<Value> = Vec::new();
+                for v in a {new.push(Value::json_to_value(v))}
+                return Value::List(new)
+            },
+            JValue::Object(o) => {
+                let mut new: HashMap<String, Value> = HashMap::new();
+                for (key, value) in o {
+                    new.insert(key, Value::json_to_value(value));
+                }
+                return Value::Compound(Box::new(new))
+            },
+            JValue::Null => Value::Null,
+            _ => {
+                log(-1, "Unknown json type - library update might have broken something");
+                Value::Null
+            }
+        }
+    }
+
+    pub fn as_u8 (&self) -> Option<u8> {
+        match self {
+            Value::UByte(u) => Some(*u),
+            _ => None
+        }
+    }
+
+    pub fn as_i8 (&self) -> Option<i8> {
+        match self {
+            Value::Byte(i) => Some(*i),
+            _ => None
+        }
+    }
+    
+    pub fn as_bool (&self) -> Option<bool> {
+        match self {
+            Value::Boolean(b) => Some(*b),
+            _ => None
+        }
+    }
+
+    pub fn as_i16 (&self) -> Option<i16> {
+        match self {
+            Value::Short(i) => Some(*i),
+            _ => None
+        }
+    }
+
+    pub fn as_i32 (&self) -> Option<i32> {
+        match self {
+            Value::Int(i) => Some(*i),
+            _ => None
+        }
+    }
+
+    pub fn as_i64 (&self) -> Option<i64> {
+        match self {
+            Value::Long(i) => Some(*i),
+            _ => None
+        }
+    }
+
+    pub fn as_u64 (&self) -> Option<u64> {
+        match self {
+            Value::ULong(u) => Some(*u),
+            _ => None
+        }
+    }
+
+    pub fn as_f32 (&self) -> Option<f32> {
+        match self {
+            Value::Float(f) => Some(*f),
+            _ => None
+        }
+    }
+
+    pub fn as_f64 (&self) -> Option<f64> {
+        match self {
+            Value::Double(f) => Some(*f),
+            _ => None
+        }
+    }
+
+    pub fn as_string (&self) -> Option<String> {
+        match self {
+            Value::String(s) => Some(s.clone()),
+            _ => None
+        }
+    }
+
+    pub fn as_i8_vec (&self) -> Option<Vec<i8>> {
+        match self {
+            Value::ByteArray(b) => Some(b.clone()),
+            _ => None
+        }
+    }
+
+    pub fn as_i32_vec (&self) -> Option<Vec<i32>> {
+        match self {
+            Value::IntArray(i) => Some(i.clone()),
+            _ => None
+        }
+    }
+
+    pub fn as_i64_vec (&self) -> Option<Vec<i64>> {
+        match self {
+            Value::LongArray(l) => Some(l.clone()),
+            _ => None
+        }
     }
 }
 

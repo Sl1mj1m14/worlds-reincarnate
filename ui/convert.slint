@@ -138,7 +138,7 @@ component Output inherits VerticalLayout {
     output-edition-box := ComboBox {
         model: Versions.editions;
         selected(val) => {
-            Versions.set-edition(0, output-edition-box.current-index);
+            Versions.set-edition(1, output-edition-box.current-index);
             Versions.output-edition = val;
             Versions.output-version = "";
         }
@@ -155,7 +155,7 @@ component Output inherits VerticalLayout {
                 height: 25px;
                 text: version.display;
                 clicked() => {
-                    Versions.set-version(0, output-edition-box.current-index, version.value);
+                    Versions.set-version(1, output-edition-box.current-index, version.value);
                     Versions.output-edition = output-edition-box.current-value;
                     Versions.output-version = version.display;
                 }
@@ -167,14 +167,14 @@ component Output inherits VerticalLayout {
         js-format := ComboBox {
             model: Versions.js-format-list;
             selected(_) => {
-                Versions.update-args(0, Versions.output-state, [js-format.current-index, js-url.current-index])
+                Versions.update-args(1, Versions.output-state, [js-format.current-index, js-url.current-index])
             }
         }
         ThemeText { text: "Choose Url:"; }
         js-url := ComboBox {
             model: Versions.js-url-list;
             selected(_) => {
-                Versions.update-args(0, Versions.output-state, [js-format.current-index, js-url.current-index])
+                Versions.update-args(1, Versions.output-state, [js-format.current-index, js-url.current-index])
             }
         }
     }

@@ -161,9 +161,11 @@ fn write_early_classic(world: World, dir: PathBuf) -> i32 {
         }
     };
 
-    for dim in blocks.dims {
-        bytes.extend_from_slice(&(dim as i16).to_be_bytes());
-    }
+    //Dims are always stored in xyz format
+    //Classic uses xzy
+    bytes.extend_from_slice(&(blocks.dims[0] as i16).to_be_bytes());
+    bytes.extend_from_slice(&(blocks.dims[2] as i16).to_be_bytes());
+    bytes.extend_from_slice(&(blocks.dims[1] as i16).to_be_bytes());
 
     for block in blocks.blocks {
         bytes.push(match block.id {
