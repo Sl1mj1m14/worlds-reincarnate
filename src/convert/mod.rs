@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 
-use crate::{log::log, world::{self, Value}};
+use crate::{Handler, log::log, world::{self, Value}};
 
 mod read;
 mod write;
 mod block;
 pub(crate) mod generate;
 
-pub fn convert(input_edition: String, input_version: i32, input_path: PathBuf, output_edition: String, output_version: i32, output_path: PathBuf) {
-    log(0,"Reading world...");
+pub fn convert(input: Handler, output: Handler) {
+    /*log(0,"Reading world...");
     let mut world = match read::read(input_edition, input_version, input_path.clone()) {
         Some(val) => val,
         None => {
@@ -26,7 +26,7 @@ pub fn convert(input_edition: String, input_version: i32, input_path: PathBuf, o
     match write::write(world, output_path) {
         1 => log(0,"World Converted!"),
         _ => log(2,"Writing failed")
-    }
+    }*/
 }
 
 

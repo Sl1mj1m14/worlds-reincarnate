@@ -1,3 +1,5 @@
+//ENSURE SAMVIDS START AFTER 0 - 0 WILL BREAK
+
 use std::{io::{Error,ErrorKind}, path::PathBuf};
 
 use crate::log::log;

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread, time::Duration};
+use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
 use chrono::prelude::*;
 use enum_iterator::{all};
 use rfd;
@@ -12,7 +12,7 @@ mod version;
 mod world;
 mod convert;
 
-use crate::{file::{Argument, JSFormat, JSUrl, filter_files}, version::Edition};
+use crate::{file::*, version::Edition};
 
 slint::include_modules!();
 
@@ -22,11 +22,11 @@ static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
 
 #[derive(Clone, Default)]
-struct Handler {
-    edition: String,
-    version: i32,
-    path: PathBuf,
-    args: Option<Vec<Argument>>,
+pub struct Handler {
+    pub edition: String,
+    pub version: i32,
+    pub path: PathBuf,
+    pub args: Option<Vec<Argument>>,
 }
 
 fn main () -> Result<(),Box<dyn Error>>{
@@ -248,6 +248,43 @@ fn main () -> Result<(),Box<dyn Error>>{
             }
         });
 
+        //Handling converting
+        let clone_input = input_handler.clone();
+        let clone_output = output_handler.clone();
+        let ui_weak = ui.as_weak();
+
+        ui.global::<Versions>().on_convert(move || {
+            let ui = ui_weak.unwrap();
+
+            if  clone_input.borrow_mut().edition.clone() == String::default() ||
+                clone_output.borrow_mut().edition.clone() == String::default() ||
+                clone_input.borrow_mut().version == i32::default() ||
+                clone_output.borrow_mut().version == i32::default() ||
+                clone_input.borrow_mut().path.clone() == PathBuf::default() {
+                    log::log(1, "Unable to convert - not all fields are appropriately set");
+                    return
+                }
+
+            let dir = get_general_dir(Dir::Documents);
+            let path = match rfd::FileDialog::new().set_directory(dir).set_title("Choose Output Folder").pick_folder() {
+                Some(p) => p,
+                None => {
+                    log::log(0, "No output directory chosen - canceling converion");
+                    return
+                }
+            };
+
+            clone_output.borrow_mut().path = path;
+
+            ui.set_state(State::Load);
+
+            //In certain cases, arguments may need to be updated...
+
+            convert::convert(clone_input.borrow_mut().clone(), clone_output.borrow_mut().clone());
+
+            ui.set_state(State::Convert);
+        });
+
         //Handling when the program is closed
         ui.window().on_close_requested(||{
             log::close();
@@ -256,32 +293,6 @@ fn main () -> Result<(),Box<dyn Error>>{
 
         ui.run().unwrap();
     });
-
-
-    //Handling converting
-    /*let clone_handler = main_handler.clone();
-    ui.on_convert(move ||{
-        let handles = clone_handler.borrow_mut().clone();
-        if !handles.path.clone().exists() {
-            if handles.path.clone() == PathBuf::default() {
-                log::log(0, "Please choose a file before converting")
-            } else {
-                log::log(2, format!("File at {} no longer exists",handles.path.clone().to_str().unwrap_or_default()))
-            }
-            return
-        }
-
-        let out_dir = file::get_general_dir(file::Dir::Documents);
-        let output_path = match rfd::FileDialog::new().set_directory(out_dir).set_title("Save Folder").pick_folder() {
-            Some(p) => p,
-            None => {
-                log::log(1,"Unable to convert without choosing output directory, returning");
-                return
-            }
-        };
-
-        convert::convert(handles.input_edition, handles.input_version, handles.path, handles.output_edition, handles.output_version, output_path);
-    });*/
 
     Ok(())
 
