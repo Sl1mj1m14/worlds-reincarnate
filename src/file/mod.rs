@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use enum_iterator::Sequence;
+
 use crate::{log::log, version};
 
 pub static JS_FORMATS: &[&str] = &[
@@ -27,7 +29,7 @@ pub enum Argument {
     JSUrl(JSUrl)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Sequence)]
 pub enum JSFormat {
     Raw,
     Firefox,
@@ -41,6 +43,36 @@ pub enum JSUrl {
     Omniarchive,
     LocalHost(u16),
     Other(String)
+}
+
+impl Sequence for JSUrl {
+    const CARDINALITY: usize = 4;
+
+    fn first() -> Option<Self> {
+        Some(JSUrl::Classic)
+    }
+
+    fn last() -> Option<Self> {
+        Some(JSUrl::Other(String::default()))
+    }
+
+    fn next(&self) -> Option<Self> {
+        match self {
+            Self::Classic => Some(JSUrl::Omniarchive),
+            Self::Omniarchive => Some(JSUrl::LocalHost(0)),
+            Self::LocalHost(_) => Some(JSUrl::Other(String::default())),
+            Self::Other(_) => None
+        }
+    }
+
+    fn previous(&self) -> Option<Self> {
+        match self {
+            Self::Classic => None,
+            Self::Omniarchive => Some(JSUrl::Classic),
+            Self::LocalHost(_) => Some(JSUrl::Omniarchive),
+            Self::Other(_) => Some(JSUrl::LocalHost(0))
+        }
+    }
 }
 
 pub fn get_general_dir(dir: Dir) -> PathBuf {

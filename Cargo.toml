@@ -13,6 +13,7 @@ colored = "3.1.1"
 regex = "1.12.3"
 csv = "1.4.0"
 serde = "1.0.228"
+enum-iterator = "2.3.0"
 
 #file handling
 rfd = "0.17.2"

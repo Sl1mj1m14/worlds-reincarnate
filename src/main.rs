@@ -1,7 +1,8 @@
 use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread, time::Duration};
 use chrono::prelude::*;
+use enum_iterator::{all};
 use rfd;
-use slint::SharedString;
+use slint::{Model, SharedString};
 
 mod log;
 mod functions;
@@ -11,7 +12,7 @@ mod version;
 mod world;
 mod convert;
 
-use crate::{file::Argument, file::JSFormat, version::Edition};
+use crate::{file::{Argument, JSFormat, JSUrl}, version::Edition};
 
 slint::include_modules!();
 
@@ -163,6 +164,7 @@ fn main () -> Result<(),Box<dyn Error>>{
         let clone_output = output_handler.clone();
         let clone_editions = all_editions.clone();
         let ui_weak = ui.as_weak();
+
         ui.global::<Versions>().on_set_version(move |code, e_index, version| {
             log::log(-1, "Attempting to change version");
             let _ui = ui_weak.unwrap(); //Will be used in the future with certain states
@@ -179,6 +181,46 @@ fn main () -> Result<(),Box<dyn Error>>{
                 1 => {
                     clone_output.borrow_mut().version = version;
                     clone_output.borrow_mut().edition = edition;
+                },
+                _ => return
+            }
+        });
+
+        //Handling updating args
+        let clone_input = input_handler.clone();
+        let clone_output = output_handler.clone();
+
+        ui.global::<Versions>().on_update_args(move |code, state, args| {
+            log::log(-1, "Attempting to update args");
+            let mut arg_arr: Vec<Argument> = Vec::new();
+            
+            match state.as_str() {
+                version::JAVASCRIPT_EDITION => 'js: {
+
+                    let args: Vec<i32> = args.iter().collect();
+                    let len = args.len();
+                    let mut i = if len >= 1 {args[0] as usize} else {0};
+                    let mut j = if len >= 2 {args[1] as usize} else {0};
+
+                    let formats = all::<JSFormat>().collect::<Vec<_>>();
+                    if i >= formats.len() {i = 0};
+                    arg_arr.push(Argument::JSFormat(formats[i].clone()));
+
+                    if i == 0 {break 'js;} //0 should always be raw json, so a url doesn't matter
+                    let urls = all::<JSUrl>().collect::<Vec<_>>();
+                    if j >= urls.len() {j = 0};
+                    arg_arr.push(Argument::JSUrl(urls[j].clone()));
+
+                },
+                _ => return
+            }
+
+            match code {
+                0 => {
+                    clone_input.borrow_mut().args = Some(arg_arr);
+                },
+                1 => {
+                    clone_output.borrow_mut().args = Some(arg_arr);
                 },
                 _ => return
             }
