@@ -1,20 +1,12 @@
-import { ListView, Button } from "std-widgets.slint";
-import { Theme } from "themes/theme.slint";
+import { ConvertScreen, Versions, Constants } from "convert.slint";
+import { LoadScreen } from "load.slint";
 
-struct Version {
-    name: string,
-    edition: string,
-    samvid: int
-}
+export { Versions, Constants }
+
+export enum State { load, convert }
 
 export component MainWindow inherits Window {
-    in property <[Version]> input-versions;
-    in property <[Version]> output-versions;
-
-    callback set-version(mode: int, edition: string, samvid: int);
-    callback browse();
-    callback convert();
-    callback test();
+    in-out property <State> state : State.load;
 
     title: "Worlds Reincarnate";
 
@@ -24,102 +16,6 @@ export component MainWindow inherits Window {
     min-height: 300px;
     min-width: 200px;
 
-    background: darkgray;
-
-    GridLayout {
-        spacing: 5px;
-
-        header := Rectangle {
-            height: 50px;
-            opacity: 25%;
-            colspan: 5;
-            background: green;
-        }
-
-        Text { 
-            text: "Input Version"; 
-            color: white;
-            row: 2;
-            col: 2;
-        }
-
-        input-versions := ListView {
-            rowspan: 2;
-            min-height: 100px;
-            width: root.width/3;
-            horizontal-scrollbar-policy: always-off;
-            row: 3;
-            col: 2;
-
-            for version in root.input-versions:
-                Button {
-                    height: 25px;
-                    text: version.name;
-                    clicked() => {
-                        root.set-version(0, version.edition, version.samvid);
-                    }
-                }
-        }
-
-        Button {
-            row: 2;
-            col: 3;
-            text: "Browse";
-            clicked() => {
-                root.browse();
-            }
-        }
-
-        Button {
-            row: 3;
-            col: 3;
-            text: "Convert";
-            clicked() => {
-                root.convert();
-            }
-        }
-
-        Text { 
-            text: "Output Version"; 
-            color: white;
-            row: 2;
-            col: 4;
-        }
-
-        output-versions := ListView {
-            rowspan: 2;
-            min-height: 100px;
-            width: root.width/3;
-            horizontal-scrollbar-policy: always-off;
-            row: 3;
-            col: 4;
-
-            for version in root.output-versions:
-                Button {
-                    height: 25px;
-                    text: version.name;
-                    clicked() => {
-                        root.set-version(1, version.edition, version.samvid);
-                    }
-                }
-        }
-
-
-        footer := Rectangle {
-            height: 50px;
-            opacity: 25%;
-            colspan: 5;
-            row: 5;
-            background: green;
-
-            Button {
-                height: 25px;
-                text: "TEST";
-                clicked() => {
-                    root.test();
-                }
-            }
-        }
-
-    }
+    if (state == State.load) : LoadScreen { height: root.height; width: root.width; }
+    if (state == State.convert) : ConvertScreen { height: root.height; width: root.width; }
 }

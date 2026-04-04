@@ -1,10 +1,8 @@
 import { Theme } from "themes/theme.slint";
 
-export component HeaderText inherits Text {
-    width: 200px;
+export component ThemeText inherits Text { color: Theme.text; }
 
-    color: Theme.text;
-
+export component HeaderText inherits ThemeText {
     font-size: 12pt;
     vertical-alignment: center;
     horizontal-alignment: center;

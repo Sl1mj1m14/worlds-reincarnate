@@ -1,8 +1,7 @@
-use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::OnceLock};
+use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread, time::Duration};
 use chrono::prelude::*;
 use rfd;
-
-//use crate::functions::{Dir, get_general_dir};
+use slint::SharedString;
 
 mod log;
 mod functions;
@@ -12,7 +11,7 @@ mod version;
 mod world;
 mod convert;
 
-use crate::convert::generate;
+use crate::{file::Argument, version::Edition};
 
 slint::include_modules!();
 
@@ -21,13 +20,12 @@ const DEBUG_FLAG: bool = true;
 static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
 
-#[derive(Clone)]
-struct MainHandler {
-    input_edition: String,
-    input_version: i32,
+#[derive(Clone, Default)]
+struct Handler {
+    edition: String,
+    version: i32,
     path: PathBuf,
-    output_edition: String,
-    output_version: i32,
+    args: Option<Vec<Argument>>,
 }
 
 fn main () -> Result<(),Box<dyn Error>>{
@@ -39,50 +37,70 @@ fn main () -> Result<(),Box<dyn Error>>{
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
 
-    //Retrieving list of all versions
-    let list = match version::get() {
-        Ok(val) => val,
-        Err(e) => {
-            log::log(2,"Error parsing versions:");
-            log::log(2,format!("{}",e));
-            log::close();
-            exit(1);
-        }
-    };
+    //Creating handlers for conversion
+    let input_handler: Rc<RefCell<Handler>> = Rc::new(RefCell::new(Handler::default()));
+    let output_handler: Rc<RefCell<Handler>> = Rc::new(RefCell::new(Handler::default()));
+    let all_editions: Arc<Mutex<Vec<Edition>>> = Arc::new(Mutex::new(Vec::new()));
 
-    //Setting defaults for conversion
-    let main_handler = Rc::new(RefCell::new(MainHandler { 
-        input_edition: list[0].id.clone(), 
-        input_version: list[0].versions[0].id, 
-        path: PathBuf::default(), 
-        output_edition: list[0].id.clone(), 
-        output_version: list[0].versions[0].id 
-    }));
-
-    //Building window
+    //Launching window
     let ui: MainWindow = MainWindow::new()?;
+    ui.set_state(State::Load);
+    let ui_weak = ui.as_weak();
 
-    let mut ui_versions: Vec<Version> = Vec::new();
+    let clone_editions = all_editions.clone();
+    thread::scope(|s| {
+        s.spawn(|| {
 
-    for edition in list {
-        //Add filters in settings in the future in order to allow preferred versions
-        for version in edition.versions {
-            log::log(-1,format!("Edition: {} Version: {} ID: {}",&edition.id,&version.display,version.id));
-            ui_versions.push(Version { 
-                edition: edition.id.clone().into(), 
-                name: version.display.clone().into(), 
-                samvid: version.id 
-                });
-        }
-    }
+            let mut unlocked_editions = clone_editions.lock().unwrap();
 
-    let version_model = Rc::new(slint::VecModel::from(ui_versions));
+            //Retrieving list of all versions
+            *unlocked_editions = match version::get() {
+                Ok(val) => val,
+                Err(e) => {
+                    log::log(2,"Error parsing versions:");
+                    log::log(2,format!("{}",e));
+                    log::close();
+                    exit(1);
+                }
+            };
 
-    ui.set_input_versions(version_model.clone().into());
-    ui.set_output_versions(version_model.clone().into());
+            if (*unlocked_editions).len() <= 0 {
+                log::log(2, "No versions found, unable to run!");
+                log::close();
+                exit(1);
+            }
+
+            //Building lists and menus for the ui
+            let mut ui_edition_list: Vec<SharedString> = Vec::new();
+            for edition in (*unlocked_editions).clone() { ui_edition_list.push(edition.display.into()); }
+
+            let mut version_list: Vec<Version> = Vec::new();
+            for version in (*unlocked_editions).clone()[0].versions.clone() { version_list.push(Version { 
+                display: version.display.into(), 
+                value: version.id
+            });}
+
+            slint::invoke_from_event_loop(move || {
+                let ui = ui_weak.unwrap();
+
+                //Setting ui constants
+                ui.global::<Constants>().set_js_value(version::JAVASCRIPT_EDITION.into());
+
+                //Setting list of editions & versions for the ui
+                ui.global::<Versions>().set_editions(Rc::new(slint::VecModel::from(ui_edition_list)).into());
+                ui.global::<Versions>().set_input_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
+                ui.global::<Versions>().set_output_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
+
+                ui.set_state(State::Convert);
+            })
+        });
+
+        ui.run().unwrap();
+    });
+    
 
     //Handling setting versions
-    let clone_handler = main_handler.clone();
+    /*let clone_handler = main_handler.clone();
     ui.on_set_version(move |code, edition, version| {
         match code {
             0 => {
@@ -95,10 +113,10 @@ fn main () -> Result<(),Box<dyn Error>>{
             },
             _ => ()
         }
-    });
+    });*/
 
     //Handling opening a file
-    let clone_handler = main_handler.clone();
+    /*let clone_handler = main_handler.clone();
     ui.on_browse(move ||{
         let edition = clone_handler.borrow_mut().input_edition.clone();
         let version = clone_handler.borrow_mut().input_version;
@@ -112,10 +130,10 @@ fn main () -> Result<(),Box<dyn Error>>{
             },
             None => log::log(-1,"No file was opened!")
         };
-    });
+    });*/
 
     //Handling converting
-    let clone_handler = main_handler.clone();
+    /*let clone_handler = main_handler.clone();
     ui.on_convert(move ||{
         let handles = clone_handler.borrow_mut().clone();
         if !handles.path.clone().exists() {
@@ -137,12 +155,7 @@ fn main () -> Result<(),Box<dyn Error>>{
         };
 
         convert::convert(handles.input_edition, handles.input_version, handles.path, handles.output_edition, handles.output_version, output_path);
-    });
-
-    ui.on_test(move ||{
-        generate::javascript(42,128);
-        generate::javascript(420,128);
-    });
+    });*/
 
     //Handling when the program is closed
     ui.window().on_close_requested(||{
@@ -150,7 +163,6 @@ fn main () -> Result<(),Box<dyn Error>>{
         slint::CloseRequestResponse::HideWindow
     });
 
-    ui.run()?;
     Ok(())
 
 }

@@ -6,6 +6,7 @@ const SAMVID_DIR: &str = "resources";
 const FILE_NAME: &str = "samvid.csv";
 
 pub const JAVA_EDITION: &str = "java";
+pub const JAVASCRIPT_EDITION: &str = "classicjs";
 
 pub const J_PC16: i32 = 40; //pc-161148
 pub const J_C12: i32 = 10110; //c0.0.12a_03
@@ -23,6 +24,7 @@ pub struct Samvid {
 #[derive(Clone)]
 pub struct Edition {
     pub id: String,
+    pub display: String,
     pub versions: Vec<Samvid>
 }
 
@@ -40,45 +42,56 @@ pub fn get () -> Result<Vec<Edition>,Error> {
 
     let mut editions: Vec<Edition> = Vec::new();
     let mut versions: Vec<Samvid> = Vec::new();
-    let mut edition: String = String::default();
+    let mut edition_display: String = String::default();
+    let mut edition_id: String = String::default();
 
 
     for (index,line) in reader.records().enumerate() {
         let clean = line?;
-        let value = clean.get(0).unwrap();
-        let id = clean.get(1).unwrap();
+        let identifier = clean.get(0).unwrap();
+        let display = clean.get(1).unwrap();
+        let id = clean.get(2).unwrap();
 
-        if id == "" {
-            if index != 0 {
-                editions.push(
-                    Edition {
-                        id: edition.clone(),
-                        versions: versions.clone()
+        match identifier {
+            "edition" => {
+                if index != 0 {
+                    editions.push ( Edition {
+                        id: edition_id,
+                        display: edition_display,
+                        versions: versions
+                    });
+                }
+                edition_display = display.to_string();
+                edition_id = id.to_string();
+                versions = Vec::new();
+                log(0,format!("Unpacking Edition: {}",display));
+            },
+            "version" => {
+                let i: i32 = match id.parse() {
+                    Ok(j) => j,
+                    Err(_) => {
+                        log(1,format!("Unable to read samvid \"{}\" of {} - Skipping",id,display));
+                        continue;
+                    }
+                };
+                versions.push(
+                    Samvid { 
+                        id: i, 
+                        display: display.to_string()
                     });
             }
-            edition = value.to_lowercase().to_string();
-            versions = Vec::new();
-            log(0,format!("Unpacking Edition: {}",value));
-        } else {
-            let i: i32 = match id.parse() {
-                Ok(j) => j,
-                Err(_) => {
-                    log(1,format!("Unable to read samvid \"{}\" of {} - Skipping",id,value));
-                    continue;
-                }
-            };
-            versions.push(
-                Samvid { 
-                    id: i, 
-                    display: value.to_string()
-                });
+            _ => {
+                log(1,format!("Unrecognized identifier found: {}",identifier));
+                log(1,format!("Samvid file may be broken..."));
+            }
         }
     }
 
-    if edition != "" {
+    if edition_id != "" {
         editions.push(
             Edition {
-                id: edition.clone(),
+                id: edition_id.clone(),
+                display: edition_display.clone(),
                 versions: versions.clone()
             });
     }

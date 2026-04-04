@@ -7,6 +7,28 @@ pub enum Dir {
     Documents
 }
 
+#[derive(Clone)]
+pub enum Argument {
+    JSFormat,
+    JSUrl
+}
+
+#[derive(Clone)]
+pub enum JSFormat {
+    Raw,
+    Firefox,
+    Chrome,
+    Edge
+}
+
+#[derive(Clone)]
+pub enum JSUrl {
+    Classic,
+    LocalHost(u16),
+    Omniarchive,
+    Other(String)
+}
+
 pub fn get_general_dir(dir: Dir) -> PathBuf {
     match dir {
         Dir::Home => {

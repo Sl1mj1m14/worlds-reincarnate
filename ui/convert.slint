@@ -1,104 +1,190 @@
-import { Button, ComboBox, ListView } from "std-widgets.slint";
+import { Button, ComboBox, ListView, VerticalBox } from "std-widgets.slint";
 import { Theme } from "themes/theme.slint";
-import { HeaderText } from "components.slint";
+import { HeaderText, ThemeText } from "components.slint";
 
 struct Version {
     display: string,
     value: int
 }
 
+export global Constants {
+    in-out property <string> js-value;
+}
+
 export global Versions {
-    in-out property <int> js-index: 1;
+    in-out property <[string]> editions;
 
-    in-out property <string> input-edition: "JAVA";
-    in-out property <string> input-version: "c0.0.13a";
-    in-out property <[string]> input-editions;
-    in-out property <[Version]> input-versions;
+    in-out property <string> input-state;
+    in-out property <string> input-edition;
+    in-out property <string> input-version;
+    in-out property <[Version]> input-version-list;
 
-    in-out property <string> output-edition: "CLASSIC JS";
-    in-out property <string> output-version: "cjs-4e4e005077c1d4940468";
-    in-out property <[string]> output-editions;
-    in-out property <[Version]> output-versions;
+    in-out property <string> output-state;
+    in-out property <string> output-edition;
+    in-out property <string> output-version;
+    in-out property <[Version]> output-version-list;
+
+    in-out property <[string]> js-format-list;
+    in-out property <[string]> js-url-list;
 
     callback set-version(mode: int, edition: int, samvid: int);
     callback set-edition(mode: int, edition: int);
+    callback update-args(mode: int, state: string, args: [int]);
+    callback browse();
+    callback convert();
+}
+
+component Settings inherits Rectangle {
+    height: 25px;
+    background: Theme.background-secondary;
+}
+
+component Header inherits Rectangle {
+    height: 100px;
+    background: Theme.background-primary;
+
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
+
+        HeaderText { text: Versions.input-edition + "    " + Versions.input-version; }
+
+        Button {
+            width: 150px;
+            text: "[PLACEHOLDER]";
+            clicked => { Versions.convert(); }
+        }
+
+        HeaderText { text: Versions.output-edition + "    " + Versions.output-version; }
+    }
+}
+
+component Input inherits VerticalLayout {
+    padding: 15px;
+
+    input-header := HorizontalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: start;
+            spacing: 5px;
+            HeaderText {
+                text: "INPUT";
+            }
+            Button {
+                text: "x";
+                width: 25px;
+                clicked => { Versions.browse(); }
+            }
+        }
+    }
+
+    ThemeText { text: "Choose Edition:"; }
+
+    input-edition-box := ComboBox {
+        model: Versions.editions;
+        selected(_) => {
+            Versions.set-edition(0, input-edition-box.current-index);
+        }
+    }
+
+    ThemeText { text: "Select Version:"; }
+
+    input-version-list := ListView {
+        min-height: 100px;
+        horizontal-scrollbar-policy: always-off;
+
+        for version in Versions.input-version-list:
+            Button {
+                height: 25px;
+                text: version.display;
+                clicked() => {
+                    Versions.set-version(0, input-edition-box.current-index, version.value);
+                }
+            }
+    }
+
+    if (Versions.input-state == Constants.js-value) : VerticalBox {
+        ThemeText { text: "Choose Format:"; }
+        js-format := ComboBox {
+            model: Versions.js-format-list;
+            selected(_) => {
+                Versions.update-args(0, Versions.input-state, [js-format.current-index, js-url.current-index])
+            }
+        }
+        ThemeText { text: "Choose Url:"; }
+        js-url := ComboBox {
+            model: Versions.js-url-list;
+            selected(_) => {
+                Versions.update-args(0, Versions.input-state, [js-format.current-index, js-url.current-index])
+            }
+        }
+    }
+}
+
+component Output inherits VerticalLayout {
+    padding: 15px;
+
+    HeaderText { 
+        height: 30px; 
+        text: "OUTPUT"; 
+    }
+
+    ThemeText { text: "Choose Edition:"; }
+
+    output-edition-box := ComboBox {
+        model: Versions.editions;
+        selected(_) => {
+            Versions.set-edition(0, output-edition-box.current-index);
+        }
+    }
+
+    ThemeText { text: "Select Version:"; }
+
+    output-version-list := ListView {
+        min-height: 100px;
+        horizontal-scrollbar-policy: always-off;
+
+        for version in Versions.output-version-list:
+            Button {
+                height: 25px;
+                text: version.display;
+                clicked() => {
+                    Versions.set-version(0, output-edition-box.current-index, version.value);
+                }
+            }
+    }
+
+    if (Versions.output-state == Constants.js-value) : VerticalBox {
+        ThemeText { text: "Choose Format:"; }
+        js-format := ComboBox {
+            model: Versions.js-format-list;
+            selected(_) => {
+                Versions.update-args(0, Versions.output-state, [js-format.current-index, js-url.current-index])
+            }
+        }
+        ThemeText { text: "Choose Url:"; }
+        js-url := ComboBox {
+            model: Versions.js-url-list;
+            selected(_) => {
+                Versions.update-args(0, Versions.output-state, [js-format.current-index, js-url.current-index])
+            }
+        }
+    }
 }
 
 export component ConvertScreen {
-    height: 525px;
 
     VerticalLayout {
-        settings := Rectangle {
-            height: 25px;
-            background: red;
-        }
+        Settings {}
 
-        header := Rectangle {
-            height: 100px;
-            background: blue;
-            HorizontalLayout {
-                spacing: 15px;
-
-                HeaderText {
-                    text: Versions.input-edition + "    " + Versions.input-version;
-                }
-
-                Button {
-                    width: 150px;
-                    text: "[PLACEHOLDER]";
-
-                }
-
-                HeaderText {
-                    text: Versions.output-edition + "    " + Versions.output-version;
-                }
-            }
-        }
+        Header {}
 
         body := Rectangle {
-            background: lime;
+            background: Theme.background-primary;
 
             HorizontalLayout {
-                input := VerticalLayout {
-                    padding: 15px;
-
-                    Text {
-                        text: "INPUT";
-                    }
-
-                    Text {
-                        text: "Choose Edition:";
-                    }
-
-                    input-edition-box := ComboBox {
-                        model: Versions.input-editions;
-                        selected(_) => {
-                            Versions.set-edition(0, input-edition-box.current-index);
-                        }
-                    }
-
-                    Text {
-                        text: "Select Version:";
-                    }
-
-                    input-version-list := ListView {
-                        min-height: 100px;
-                        horizontal-scrollbar-policy: always-off;
-
-                        for version in Versions.input-versions:
-                            Button {
-                                height: 25px;
-                                text: version.display;
-                                clicked() => {
-                                    Versions.set-version(0, input-edition-box.current-index, version.value);
-                                }
-                            }
-                    }
-
-                    if (input-edition-box.current-index == Version.js-index) : Text {
-                        //Javascript format and website handling
-                    }
-                }
+                Input {}
+                Output {}
             }
         }
     }
