@@ -70,6 +70,8 @@ fn main () -> Result<(),Box<dyn Error>>{
                 exit(1);
             }
 
+            thread::sleep(Duration::from_secs(5));
+
             //Building lists and menus for the ui
             let mut ui_edition_list: Vec<SharedString> = Vec::new();
             for edition in (*unlocked_editions).clone() { ui_edition_list.push(edition.display.into()); }
@@ -79,6 +81,11 @@ fn main () -> Result<(),Box<dyn Error>>{
                 display: version.display.into(), 
                 value: version.id
             });}
+
+            let mut js_format_list: Vec<SharedString> = Vec::new();
+            for format in file::JS_FORMATS { js_format_list.push((*format).into())}
+            let mut js_url_list: Vec<SharedString> = Vec::new();
+            for url in file::JS_URLS { js_url_list.push((*url).into())}
 
             slint::invoke_from_event_loop(move || {
                 let ui = ui_weak.unwrap();
@@ -91,12 +98,72 @@ fn main () -> Result<(),Box<dyn Error>>{
                 ui.global::<Versions>().set_input_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
                 ui.global::<Versions>().set_output_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
 
+                //Setting sub lists
+                ui.global::<Versions>().set_js_format_list(Rc::new(slint::VecModel::from(js_format_list)).into());
+                ui.global::<Versions>().set_js_url_list(Rc::new(slint::VecModel::from(js_url_list)).into());
+
                 ui.set_state(State::Convert);
             })
         });
 
+        //Handling updating edition
+        let clone_input = input_handler.clone();
+        let clone_output = output_handler.clone();
+        let clone_editions = all_editions.clone();
+        let ui_weak = ui.as_weak();
+
+        ui.global::<Versions>().on_set_edition(move |code, e_index| {
+            log::log(-1, "Attempting to change edition");
+            let ui = ui_weak.unwrap();
+            let clone_editions = clone_editions.lock().unwrap();
+
+            let i = ((e_index.abs() + e_index)/2) as usize; //Index can return -1, this just changes it to 0
+
+            let id = (*clone_editions)[i].id.clone();
+            let display = (*clone_editions)[i].display.clone();
+
+            if (code == 0 && clone_input.borrow_mut().edition == id) || (code == 1 && clone_output.borrow_mut().edition == id) || code > 1 {return}
+            
+            let mut version_list: Vec<Version> = Vec::new();
+            for version in (*clone_editions).clone()[i].versions.clone() { version_list.push(Version { 
+                display: version.display.into(), 
+                value: version.id
+            });}
+
+            match code {
+                0 => {
+                    if clone_input.borrow_mut().edition == (*clone_editions)[i].id.clone() {return}
+                    clone_input.replace(Handler::default());
+                    clone_input.borrow_mut().edition = (*clone_editions)[i].id.clone();
+
+                    ui.global::<Versions>().set_input_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
+                    ui.global::<Versions>().set_input_edition(display.into());
+                    ui.global::<Versions>().set_input_version(SharedString::default());
+
+                    if id == version::JAVASCRIPT_EDITION {ui.global::<Versions>().set_input_state(version::JAVASCRIPT_EDITION.into());}
+                    else {ui.global::<Versions>().set_input_state(SharedString::default());}
+
+                },
+                1 => {
+                    if clone_output.borrow_mut().edition == (*clone_editions)[i].id.clone() {return}
+                    clone_output.replace(Handler::default());
+                    clone_output.borrow_mut().edition = (*clone_editions)[i].id.clone();
+
+                    ui.global::<Versions>().set_output_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
+                    ui.global::<Versions>().set_output_edition(display.into());
+                    ui.global::<Versions>().set_output_version(SharedString::default());
+
+                    if id == version::JAVASCRIPT_EDITION {ui.global::<Versions>().set_output_state(version::JAVASCRIPT_EDITION.into());}
+                    else {ui.global::<Versions>().set_output_state(SharedString::default());}
+                },
+                _ => return
+            }
+        });
+
         ui.run().unwrap();
     });
+
+    
     
 
     //Handling setting versions

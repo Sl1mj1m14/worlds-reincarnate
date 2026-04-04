@@ -83,6 +83,7 @@ component Input inherits VerticalLayout {
     input-edition-box := ComboBox {
         model: Versions.editions;
         selected(_) => {
+            debug("The callback is being entered");
             Versions.set-edition(0, input-edition-box.current-index);
         }
     }

@@ -2,6 +2,20 @@ use std::path::PathBuf;
 
 use crate::{log::log, version};
 
+pub static JS_FORMATS: &[&str] = &[
+    "Raw (Json)",
+    "Firefox",
+    "Chrome",
+    "Edge"
+];
+
+pub static JS_URLS: &[&str] = &[
+    "classic.minecraft.net",
+    "omniarchive.uk/23a-js/",
+    "localhost",
+    "Other"
+];
+
 pub enum Dir {
     Home,
     Documents
@@ -24,8 +38,8 @@ pub enum JSFormat {
 #[derive(Clone)]
 pub enum JSUrl {
     Classic,
-    LocalHost(u16),
     Omniarchive,
+    LocalHost(u16),
     Other(String)
 }
 
