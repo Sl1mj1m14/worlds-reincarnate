@@ -1,11 +1,8 @@
 import { ConvertScreen, Versions, Constants } from "convert.slint";
 import { LoadScreen } from "load.slint";
+import { UIState, State } from "states.slint";
 
-export { Versions, Constants }
-
-export enum State { load, convert }
-
-export global UIState { in-out property <State> state : State.load; }
+export { Versions, Constants, UIState, State }
 
 export component MainWindow inherits Window {
 
