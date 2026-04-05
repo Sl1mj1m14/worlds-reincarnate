@@ -1,4 +1,4 @@
-use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
+use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread, time::Duration};
 use chrono::prelude::*;
 use enum_iterator::{all};
 use rfd;
@@ -85,6 +85,8 @@ fn main () -> Result<(),Box<dyn Error>>{
             for format in file::JS_FORMATS { js_format_list.push((*format).into())}
             let mut js_url_list: Vec<SharedString> = Vec::new();
             for url in file::JS_URLS { js_url_list.push((*url).into())}
+
+            thread::sleep(Duration::from_secs(2));
 
             slint::invoke_from_event_loop(move || {
                 let ui = ui_weak.unwrap();
@@ -279,9 +281,25 @@ fn main () -> Result<(),Box<dyn Error>>{
             clone_output.borrow_mut().path = path;
             //In certain cases, arguments may need to be updated...
 
-            let _ = convert::convert(clone_input.borrow_mut().clone(), clone_output.borrow_mut().clone());
+            let local_input = clone_input.borrow_mut().clone();
+            let local_output = clone_output.borrow_mut().clone();
+            let ui_weak_clone = ui_weak.clone();
+            thread::scope(|s| {
+                s.spawn(||{
+                    
+                    let _ = convert::convert(local_input, local_output);
+                    thread::sleep(Duration::from_secs(2));
+                    
+                    slint::invoke_from_event_loop(move || {
+                        let ui = ui_weak_clone.unwrap();
+                        ui.global::<UIState>().set_state(State::Convert);
+                    })
+                });
+            });
 
-            ui.global::<UIState>().set_state(State::Convert);
+            //let _ = convert::convert(clone_input.borrow_mut().clone(), clone_output.borrow_mut().clone());
+
+            //ui.global::<UIState>().set_state(State::Convert);
         });
 
         //Handling when the program is closed

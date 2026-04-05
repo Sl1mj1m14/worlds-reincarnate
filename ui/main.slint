@@ -14,6 +14,17 @@ export component MainWindow inherits Window {
     min-height: 300px;
     min-width: 200px;
 
-    if (UIState.state == State.load) : LoadScreen { height: root.height; width: root.width; }
-    if (UIState.state == State.convert) : ConvertScreen { height: root.height; width: root.width; }
+    loading-screen := LoadScreen { height: root.height; width: root.width; }
+    converting-screen := ConvertScreen { height: root.height; width: root.width; }
+
+    states [
+        loading when (UIState.state == State.load) : {
+            loading-screen.visible: true;
+            converting-screen.visible: false;
+        }
+        converting when (UIState.state == State.convert) : {
+            loading-screen.visible: false;
+            converting-screen.visible: true;
+        }
+    ]
 }
