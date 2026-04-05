@@ -349,6 +349,9 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
     let mut world = World::default();
     world.world_data = Some(world_data);
     world.blocks = Some(block_array);
+    world.edition = JAVASCRIPT_EDITION.to_string();
+    world.version = JS_E620;
+    log(0,"Assuming latest classic javascript version");
 
     Some(world)
 }

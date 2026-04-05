@@ -296,10 +296,6 @@ fn main () -> Result<(),Box<dyn Error>>{
                     })
                 });
             });
-
-            //let _ = convert::convert(clone_input.borrow_mut().clone(), clone_output.borrow_mut().clone());
-
-            //ui.global::<UIState>().set_state(State::Convert);
         });
 
         //Handling when the program is closed
