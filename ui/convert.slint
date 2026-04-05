@@ -1,4 +1,5 @@
 import { Button, ComboBox, ListView, VerticalBox } from "std-widgets.slint";
+import { UIState, State } from "main.slint";
 import { Theme } from "themes/theme.slint";
 import { HeaderText, ThemeText } from "components.slint";
 
@@ -52,7 +53,10 @@ component Header inherits Rectangle {
         Button {
             width: 150px;
             text: "[PLACEHOLDER]";
-            clicked => { Versions.convert(); }
+            clicked => { 
+                UIState.state = State::Load;
+                Versions.convert(); 
+            }
         }
 
         HeaderText { text: Versions.output-edition + "    " + Versions.output-version; }

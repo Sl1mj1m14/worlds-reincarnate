@@ -5,8 +5,9 @@ export { Versions, Constants }
 
 export enum State { load, convert }
 
+export global UIState { in-out property <State> state : State.load; }
+
 export component MainWindow inherits Window {
-    in-out property <State> state : State.load;
 
     title: "Worlds Reincarnate";
 
@@ -16,6 +17,6 @@ export component MainWindow inherits Window {
     min-height: 300px;
     min-width: 200px;
 
-    if (state == State.load) : LoadScreen { height: root.height; width: root.width; }
-    if (state == State.convert) : ConvertScreen { height: root.height; width: root.width; }
+    if (UIState.state == State.load) : LoadScreen { height: root.height; width: root.width; }
+    if (UIState.state == State.convert) : ConvertScreen { height: root.height; width: root.width; }
 }

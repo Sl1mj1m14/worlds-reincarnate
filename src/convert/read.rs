@@ -1,8 +1,8 @@
-use std::{collections::HashMap, default, fs, io::Read, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use rusqlite::Connection;
 use serde_json::Value as JValue;
-use snap::{raw::Decoder, read::FrameDecoder};
+use snap::raw::Decoder;
 
 use crate::{Handler, convert::generate, file::{Argument, JSFormat, JSUrl}, functions::*, log::log, version::*, world::*};
 
@@ -210,7 +210,7 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
             let table = match stmt.query_map([], |row| Ok(
                 Data {
                     key: row.get(0).unwrap(),
-                    value: row.get(2).unwrap()
+                    value: row.get(1).unwrap()
                 }
             )) {
                 Ok(t) => t,
@@ -236,7 +236,6 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
                 };
 
                 let str = String::from_utf8(decompressed).unwrap_or(String::default());
-                log(-1, format!("{}",str.clone()));
 
                 if data.key == "savedGame" {
                     saved_game_json = match serde_json::from_str(&str.as_str()) {
@@ -266,8 +265,8 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
         }
     }
 
-    log(-1, format!("{}",saved_game_json));
-    log(-1, format!("{}",settings_json));
+    log(-1, format!("savedGame: {}",saved_game_json));
+    log(-1, format!("settings: {}",settings_json));
 
     let mut world_data: HashMap<String,Value> = HashMap::new();
     let mut changed_blocks: JValue = JValue::Null;
@@ -309,7 +308,37 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
     }
 
     log(0, "Generating Javascript World from Seed...");
-    //let mut tiles = generate::javascript(world_seed, world_size);
+    let mut tiles = generate::javascript(world_seed, world_size);
+
+    let format = ["-x".to_string(),"+z".to_string(),"+y".to_string()];
+    let dims = [world_size, 64, world_size]; //Always in format x/y/z
+
+    log(0, "Inserting Changed Blocks...");
+    if changed_blocks.as_object().is_some() {
+        for (key, value) in changed_blocks.as_object().unwrap() {
+            let coords: Vec<&str> = key.split(['p','_']).filter(|s| !s.is_empty()).collect();
+            let x: i32 = coords[0].parse().unwrap_or(-1);
+            let y: i32 = coords[1].parse().unwrap_or(-1);
+            let z: i32 = coords[2].parse().unwrap_or(-1);
+            let bt: i8 = value["bt"].as_i64().unwrap_or(-1) as i8;
+
+            //log(-1, format!("changing block {bt} at {x} {y} {z}"));
+
+            if x < 0 || y < 0 || z < 0 || bt < 0 {continue}
+
+            let i = x + (z * dims[0]) + (y * dims[0] * dims[2]);
+            tiles[i as usize] = bt as u8;
+        }
+    }
+
+    let mut blocks: Vec<Block> = Vec::new();
+    for tile in tiles {blocks.push(Block { id: Value::UByte(tile), block_data: None })}
+
+    let block_array = BlockArray {
+        format: format,
+        dims: dims,
+        blocks: blocks
+    };
 
     if settings_json.as_object().is_some() {
         for (key, value) in settings_json.as_object().unwrap() {
@@ -317,6 +346,9 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
         }
     }
 
-    
-    None
+    let mut world = World::default();
+    world.world_data = Some(world_data);
+    world.blocks = Some(block_array);
+
+    Some(world)
 }

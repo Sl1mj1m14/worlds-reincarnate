@@ -262,6 +262,7 @@ fn main () -> Result<(),Box<dyn Error>>{
                 clone_output.borrow_mut().version == i32::default() ||
                 clone_input.borrow_mut().path.clone() == PathBuf::default() {
                     log::log(1, "Unable to convert - not all fields are appropriately set");
+                    ui.set_state(State::Convert); 
                     return
                 }
 
@@ -270,19 +271,17 @@ fn main () -> Result<(),Box<dyn Error>>{
                 Some(p) => p,
                 None => {
                     log::log(0, "No output directory chosen - canceling converion");
+                    ui.set_state(State::Convert); 
                     return
                 }
             };
 
             clone_output.borrow_mut().path = path;
-
-            ui.set_state(State::Load);
-
             //In certain cases, arguments may need to be updated...
 
-            convert::convert(clone_input.borrow_mut().clone(), clone_output.borrow_mut().clone());
+            let _ = convert::convert(clone_input.borrow_mut().clone(), clone_output.borrow_mut().clone());
 
-            ui.set_state(State::Convert);
+            ui.set_state(State::Convert); 
         });
 
         //Handling when the program is closed
