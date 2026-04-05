@@ -1,4 +1,4 @@
-use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread, time::Duration};
+use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
 use chrono::prelude::*;
 use enum_iterator::{all};
 use rfd;
@@ -280,21 +280,16 @@ fn main () -> Result<(),Box<dyn Error>>{
             let local_input = clone_input.borrow_mut().clone();
             let local_output = clone_output.borrow_mut().clone();
             let ui_weak_clone = ui_weak.clone();
-            thread::scope(|s| {
-                s.spawn(||{
-                    
-                    let _ = convert::convert(local_input, local_output);
-                    thread::sleep(Duration::from_secs(2));
-                    
-                    slint::invoke_from_event_loop(move || {
-                        let ui = ui_weak_clone.unwrap();
-                        ui.set_state(State::Convert);
-                    })
+            thread::spawn(move || {
+                convert::convert(local_input, local_output);
+
+                let _ = slint::invoke_from_event_loop(move || {
+                    let ui = ui_weak_clone.unwrap();
+                    ui.set_state(State::Convert);
                 });
-                ui.set_state(State::Load);
-                log::log(-1, "Main thread should be finished...");
             });
-            log::log(-1, "Main thread should be SUPER finished...");
+
+            ui.set_state(State::Load);
         });
 
         //Handling when the program is closed

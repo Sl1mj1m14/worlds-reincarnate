@@ -20,7 +20,7 @@ export component MainWindow inherits Window {
     loading-screen := LoadScreen { height: root.height; width: root.width; visible: true; }
     converting-screen := ConvertScreen { height: root.height; width: root.width; visible: false; }
 
-    /*states [
+    states [
         loading when (state == State.load) : {
             loading-screen.visible: true;
             converting-screen.visible: false;
@@ -29,22 +29,5 @@ export component MainWindow inherits Window {
             loading-screen.visible: false;
             converting-screen.visible: true;
         }
-    ]*/
-
-    changed state => {
-        if (state == State.load) {
-            loading-screen.visible = true;
-            converting-screen.visible = false;
-            debug("Loading")
-
-        } else if (state == State.convert) {
-            loading-screen.visible = false;
-            converting-screen.visible = true;
-            debug("Converting")
-
-        } else {
-            loading-screen.visible = true;
-            converting-screen.visible = false;
-        }
-    }
+    ]
 }
