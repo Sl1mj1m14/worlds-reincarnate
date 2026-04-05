@@ -21,6 +21,12 @@ pub trait Generic {
     fn set (&self) -> Value;
 }
 
+impl Generic for bool {
+    fn set (&self) -> Value {
+        Value::Boolean(*self)
+    }
+}
+
 impl Generic for i8 {
     fn set (&self) -> Value {
         Value::Byte(*self)
@@ -33,21 +39,27 @@ impl Generic for u8 {
     }
 }
 
-impl Generic for bool {
-    fn set (&self) -> Value {
-        Value::Boolean(*self)
-    }
-}
-
 impl Generic for i16 {
     fn set (&self) -> Value {
         Value::Short(*self)
     }
 }
 
+impl Generic for u16 {
+    fn set (&self) -> Value {
+        Value::UShort(*self)
+    }
+}
+
 impl Generic for i32 {
     fn set (&self) -> Value {
         Value::Int(*self)
+    }
+}
+
+impl Generic for u32 {
+    fn set (&self) -> Value {
+        Value::UInt(*self)
     }
 }
 
@@ -115,11 +127,13 @@ impl Generic for Vec<i64> {
 
 #[derive(Clone)]
 pub enum Value {
+    Boolean(bool),
     Byte(i8),
     UByte(u8),
-    Boolean(bool),
     Short(i16),
+    UShort(u16),
     Int(i32),
+    UInt(u32),
     Long(i64),
     ULong(u64),
     Float(f32),
@@ -174,20 +188,6 @@ impl Value {
         }
     }
 
-    pub fn as_u8 (&self) -> Option<u8> {
-        match self {
-            Value::UByte(u) => Some(*u),
-            _ => None
-        }
-    }
-
-    pub fn as_i8 (&self) -> Option<i8> {
-        match self {
-            Value::Byte(i) => Some(*i),
-            _ => None
-        }
-    }
-    
     pub fn as_bool (&self) -> Option<bool> {
         match self {
             Value::Boolean(b) => Some(*b),
@@ -195,43 +195,161 @@ impl Value {
         }
     }
 
+    pub fn as_i8 (&self) -> Option<i8> {
+        match self {
+            Value::Byte(b) => Some(*b),
+            Value::UByte(b) => Some(*b as i8),
+            Value::Short(s) => Some(*s as i8),
+            Value::UShort(s) => Some(*s as i8),
+            Value::Int(i) => Some(*i as i8),
+            Value::UInt(i) => Some(*i as i8),
+            Value::Long(l) => Some(*l as i8),
+            Value::ULong(l) => Some(*l as i8),
+            Value::Float(f) => Some(*f as i8),
+            Value::Double(f) => Some(*f as i8),
+            _ => None
+        }
+    }
+
+    pub fn as_u8 (&self) -> Option<u8> {
+        match self {
+            Value::Byte(b) => Some(*b as u8),
+            Value::UByte(b) => Some(*b),
+            Value::Short(s) => Some(*s as u8),
+            Value::UShort(s) => Some(*s as u8),
+            Value::Int(i) => Some(*i as u8),
+            Value::UInt(i) => Some(*i as u8),
+            Value::Long(l) => Some(*l as u8),
+            Value::ULong(l) => Some(*l as u8),
+            Value::Float(f) => Some(*f as u8),
+            Value::Double(f) => Some(*f as u8),
+            _ => None
+        }
+    }
+
     pub fn as_i16 (&self) -> Option<i16> {
         match self {
-            Value::Short(i) => Some(*i),
+            Value::Byte(b) => Some(*b as i16),
+            Value::UByte(b) => Some(*b as i16),
+            Value::Short(s) => Some(*s),
+            Value::UShort(s) => Some(*s as i16),
+            Value::Int(i) => Some(*i as i16),
+            Value::UInt(i) => Some(*i as i16),
+            Value::Long(l) => Some(*l as i16),
+            Value::ULong(l) => Some(*l as i16),
+            Value::Float(f) => Some(*f as i16),
+            Value::Double(f) => Some(*f as i16),
+            _ => None
+        }
+    }
+
+    pub fn as_u16 (&self) -> Option<u16> {
+        match self {
+            Value::Byte(b) => Some(*b as u16),
+            Value::UByte(b) => Some(*b as u16),
+            Value::Short(s) => Some(*s as u16),
+            Value::UShort(s) => Some(*s),
+            Value::Int(i) => Some(*i as u16),
+            Value::UInt(i) => Some(*i as u16),
+            Value::Long(l) => Some(*l as u16),
+            Value::ULong(l) => Some(*l as u16),
+            Value::Float(f) => Some(*f as u16),
+            Value::Double(f) => Some(*f as u16),
             _ => None
         }
     }
 
     pub fn as_i32 (&self) -> Option<i32> {
         match self {
+            Value::Byte(b) => Some(*b as i32),
+            Value::UByte(b) => Some(*b as i32),
+            Value::Short(s) => Some(*s as i32),
+            Value::UShort(s) => Some(*s as i32),
             Value::Int(i) => Some(*i),
+            Value::UInt(i) => Some(*i as i32),
+            Value::Long(l) => Some(*l as i32),
+            Value::ULong(l) => Some(*l as i32),
+            Value::Float(f) => Some(*f as i32),
+            Value::Double(f) => Some(*f as i32),
+            _ => None
+        }
+    }
+
+    pub fn as_u32 (&self) -> Option<u32> {
+        match self {
+            Value::Byte(b) => Some(*b as u32),
+            Value::UByte(b) => Some(*b as u32),
+            Value::Short(s) => Some(*s as u32),
+            Value::UShort(s) => Some(*s as u32),
+            Value::Int(i) => Some(*i as u32),
+            Value::UInt(i) => Some(*i),
+            Value::Long(l) => Some(*l as u32),
+            Value::ULong(l) => Some(*l as u32),
+            Value::Float(f) => Some(*f as u32),
+            Value::Double(f) => Some(*f as u32),
             _ => None
         }
     }
 
     pub fn as_i64 (&self) -> Option<i64> {
         match self {
-            Value::Long(i) => Some(*i),
+            Value::Byte(b) => Some(*b as i64),
+            Value::UByte(b) => Some(*b as i64),
+            Value::Short(s) => Some(*s as i64),
+            Value::UShort(s) => Some(*s as i64),
+            Value::Int(i) => Some(*i as i64),
+            Value::UInt(i) => Some(*i as i64),
+            Value::Long(l) => Some(*l),
+            Value::ULong(l) => Some(*l as i64),
+            Value::Float(f) => Some(*f as i64),
+            Value::Double(f) => Some(*f as i64),
             _ => None
         }
     }
 
     pub fn as_u64 (&self) -> Option<u64> {
         match self {
-            Value::ULong(u) => Some(*u),
+            Value::Byte(b) => Some(*b as u64),
+            Value::UByte(b) => Some(*b as u64),
+            Value::Short(s) => Some(*s as u64),
+            Value::UShort(s) => Some(*s as u64),
+            Value::Int(i) => Some(*i as u64),
+            Value::UInt(i) => Some(*i as u64),
+            Value::Long(l) => Some(*l as u64),
+            Value::ULong(l) => Some(*l),
+            Value::Float(f) => Some(*f as u64),
+            Value::Double(f) => Some(*f as u64),
             _ => None
         }
     }
 
     pub fn as_f32 (&self) -> Option<f32> {
         match self {
+            Value::Byte(b) => Some(*b as f32),
+            Value::UByte(b) => Some(*b as f32),
+            Value::Short(s) => Some(*s as f32),
+            Value::UShort(s) => Some(*s as f32),
+            Value::Int(i) => Some(*i as f32),
+            Value::UInt(i) => Some(*i as f32),
+            Value::Long(l) => Some(*l as f32),
+            Value::ULong(l) => Some(*l as f32),
             Value::Float(f) => Some(*f),
+            Value::Double(f) => Some(*f as f32),
             _ => None
         }
     }
 
     pub fn as_f64 (&self) -> Option<f64> {
         match self {
+            Value::Byte(b) => Some(*b as f64),
+            Value::UByte(b) => Some(*b as f64),
+            Value::Short(s) => Some(*s as f64),
+            Value::UShort(s) => Some(*s as f64),
+            Value::Int(i) => Some(*i as f64),
+            Value::UInt(i) => Some(*i as f64),
+            Value::Long(l) => Some(*l as f64),
+            Value::ULong(l) => Some(*l as f64),
+            Value::Float(f) => Some(*f as f64),
             Value::Double(f) => Some(*f),
             _ => None
         }
