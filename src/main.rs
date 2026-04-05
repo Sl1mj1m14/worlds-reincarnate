@@ -45,7 +45,7 @@ fn main () -> Result<(),Box<dyn Error>>{
 
     //Creating window
     let ui: MainWindow = MainWindow::new()?;
-    ui.global::<UIState>().set_state(State::Load);
+    ui.set_state(State::Load);
 
     let ui_weak = ui.as_weak();
     let clone_editions = all_editions.clone();
@@ -101,7 +101,7 @@ fn main () -> Result<(),Box<dyn Error>>{
                 ui.global::<Versions>().set_js_format_list(Rc::new(slint::VecModel::from(js_format_list)).into());
                 ui.global::<Versions>().set_js_url_list(Rc::new(slint::VecModel::from(js_url_list)).into());
 
-                ui.global::<UIState>().set_state(State::Convert);
+                ui.set_state(State::Convert);
             })
         });
 
@@ -262,7 +262,6 @@ fn main () -> Result<(),Box<dyn Error>>{
                 clone_output.borrow_mut().version == i32::default() ||
                 clone_input.borrow_mut().path.clone() == PathBuf::default() {
                     log::log(1, "Unable to convert - not all fields are appropriately set");
-                    ui.global::<UIState>().set_state(State::Convert); 
                     return
                 }
 
@@ -271,7 +270,6 @@ fn main () -> Result<(),Box<dyn Error>>{
                 Some(p) => p,
                 None => {
                     log::log(0, "No output directory chosen - canceling converion");
-                    ui.global::<UIState>().set_state(State::Convert); 
                     return
                 }
             };
@@ -290,10 +288,13 @@ fn main () -> Result<(),Box<dyn Error>>{
                     
                     slint::invoke_from_event_loop(move || {
                         let ui = ui_weak_clone.unwrap();
-                        ui.global::<UIState>().set_state(State::Convert);
+                        ui.set_state(State::Convert);
                     })
                 });
+                ui.set_state(State::Load);
+                log::log(-1, "Main thread should be finished...");
             });
+            log::log(-1, "Main thread should be SUPER finished...");
         });
 
         //Handling when the program is closed

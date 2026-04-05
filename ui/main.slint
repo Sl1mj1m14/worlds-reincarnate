@@ -1,10 +1,13 @@
 import { ConvertScreen, Versions, Constants } from "convert.slint";
 import { LoadScreen } from "load.slint";
-import { UIState, State } from "states.slint";
 
-export { Versions, Constants, UIState, State }
+export { Versions, Constants }
+
+export enum State { load, convert }
 
 export component MainWindow inherits Window {
+
+    in-out property <State> state : State.load;
 
     title: "Worlds Reincarnate";
 
@@ -14,17 +17,34 @@ export component MainWindow inherits Window {
     min-height: 300px;
     min-width: 200px;
 
-    loading-screen := LoadScreen { height: root.height; width: root.width; }
-    converting-screen := ConvertScreen { height: root.height; width: root.width; }
+    loading-screen := LoadScreen { height: root.height; width: root.width; visible: true; }
+    converting-screen := ConvertScreen { height: root.height; width: root.width; visible: false; }
 
-    states [
-        loading when (UIState.state == State.load) : {
+    /*states [
+        loading when (state == State.load) : {
             loading-screen.visible: true;
             converting-screen.visible: false;
         }
-        converting when (UIState.state == State.convert) : {
+        converting when (state == State.convert) : {
             loading-screen.visible: false;
             converting-screen.visible: true;
         }
-    ]
+    ]*/
+
+    changed state => {
+        if (state == State.load) {
+            loading-screen.visible = true;
+            converting-screen.visible = false;
+            debug("Loading")
+
+        } else if (state == State.convert) {
+            loading-screen.visible = false;
+            converting-screen.visible = true;
+            debug("Converting")
+
+        } else {
+            loading-screen.visible = true;
+            converting-screen.visible = false;
+        }
+    }
 }
