@@ -86,8 +86,6 @@ fn main () -> Result<(),Box<dyn Error>>{
             let mut js_url_list: Vec<SharedString> = Vec::new();
             for url in file::JS_URLS { js_url_list.push((*url).into())}
 
-            thread::sleep(Duration::from_secs(2));
-
             slint::invoke_from_event_loop(move || {
                 let ui = ui_weak.unwrap();
 
