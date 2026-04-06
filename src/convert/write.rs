@@ -1,9 +1,13 @@
-use std::{collections::HashMap, default, fs::{File, OpenOptions, create_dir_all, remove_file}, io::Write, path::PathBuf};
+use std::{collections::HashMap, fs::{self, File, OpenOptions, create_dir_all, remove_dir_all, remove_file}, io::{BufWriter, Write}, path::PathBuf};
 
-use serde_json::{Map, Value as JValue, json};
+use chrono::Utc;
+use regex::Regex;
+use rusqlite::Connection;
+use serde_json::{Map, Value as JValue, json, to_writer_pretty};
 use flate2::{Compression, write::GzEncoder};
+use snap::raw::Encoder;
 
-use crate::{convert::generate, file::Argument, log::log, version::{J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{self, Value, World}};
+use crate::{convert::generate, file::{Argument, JSFormat, JSUrl}, log::log, version::{J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Value, World}};
 
 pub fn write (world: World, path: PathBuf, args: Option<Vec<Argument>>) -> i32 {
     if !path.exists() {
@@ -232,7 +236,7 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
         world_size = ((block_array.blocks.len()/64) as f32).sqrt() as i32;
         if (world_size * world_size * 64) as usize != block_array.blocks.len() {
             log(2, format!("Failed to repair invalid world size"));
-            return 1
+            return 0
         }
     }
 
@@ -293,5 +297,237 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
     log(-1, format!("savedGame: {}", saved_game.to_string()));
     log(-1, format!("settings: {}", settings.to_string()));
 
-    return 0
+    let mut format = JSFormat::Raw;
+    let mut url = JSUrl::Classic;
+
+    if args.is_some() {
+        for arg in args.unwrap() {
+            match arg {
+                Argument::JSFormat(f) => format = f,
+                Argument::JSUrl(u) => url = u,
+                _ => ()
+            }
+        }
+    }
+
+    match format {
+        JSFormat::Raw => {
+            let value: JValue = json!({ "savedGame" : saved_game, "settings" : settings});
+
+            let mut path: PathBuf = dir.clone();
+            path.push("output");
+            path.set_extension("json");
+
+            if path.exists() {
+                log(1,"File already exists in output location!");
+                log(1,format!("Replacing file at {}",path.clone().to_str().unwrap_or_default()));
+                match remove_file(path.clone()) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log(2,format!("Unable to replace file at {}!",path.clone().to_str().unwrap_or_default()));
+                        log(2,format!("{e}"));
+                        return 0
+                    }
+                }
+            }
+
+            let output: File = match OpenOptions::new().write(true).create(true).open(path) {
+                Ok(f) => f,
+                Err(e) => {
+                    log(2,"Failed to create file!");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            };
+            let writer = BufWriter::new(output);
+
+            match to_writer_pretty(writer, &value) {
+                Ok(_) => (),
+                Err(e) => {
+                    log(2,"Failed to write file!");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            }
+            
+        },
+        JSFormat::Firefox => {
+            let domain: String = match url {
+                JSUrl::Classic => "https://classic.minecraft.net".to_string(),
+                JSUrl::Omniarchive => "https://omniarchive.uk".to_string(),
+                JSUrl::LocalHost(port) => format!("http://localhost:{port}"), //Test parsing with good laptop
+                JSUrl::Other(site) => {
+                    let pattern = Regex::new(r#"^[a-zA-Z0-9\.\+-]+:\/\/[^\/\#\\]+"#).unwrap(); //Pattern to match "scheme://hostname" - removing any sub folders
+                    let captures = pattern.captures(&site);
+                    match captures {
+                        Some(c) => c[0].to_string(),
+                        None => {
+                            log(1, format!("Invalid url {site} detected - will likely not work in a browser"));
+                            site
+                        }
+                    }
+                }
+            };
+
+            let mut pattern = Regex::new(r#"\?"#).unwrap();
+            let mut folder = pattern.replace_all(&domain, "^").to_string();
+            pattern = Regex::new(r#"[\*\:\/]"#).unwrap();
+            folder = pattern.replace_all(&folder, "+").to_string();
+
+            let mut path = dir.clone();
+            path.push(folder);
+
+            if path.exists() {
+                log(1,"Folder already exists in output location!");
+                log(1,format!("Replacing folder at {}",path.clone().to_str().unwrap_or_default()));
+                match remove_dir_all(path.clone()) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log(2,format!("Unable to replace file at {}!",path.clone().to_str().unwrap_or_default()));
+                        log(2,format!("{e}"));
+                        return 0
+                    }
+                }
+            }
+
+            path.push("ls");
+            match create_dir_all(path.clone()) {
+                Ok(_) => (),
+                Err(e) => {
+                    log(2, "Failed to create folder");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            }
+
+            path.push("data");
+            path.set_extension("sqlite");
+
+            let conn = match Connection::open(path.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    log(2, "Failed to write to database");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            };
+
+            let _ = conn.pragma_update(None, "user_version", 80);
+            let _ = conn.pragma_update(None, "auto_vacuum", 2);
+            let _ = conn.pragma_update(None, "page_size", 1024);
+            match conn.execute("VACUUM", []) {
+                Ok(_) => (),
+                Err(e) => {
+                    log(2, "Failed to write to database");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            }
+
+            if conn.execute(
+            "CREATE TABLE data ( 
+                key TEXT PRIMARY KEY, 
+                utf16_length INTEGER NOT NULL, 
+                conversion_type INTEGER NOT NULL, 
+                compression_type INTEGER NOT NULL, 
+                last_access_time INTEGER NOT NULL DEFAULT 0, 
+                value BLOB NOT NULL)", 
+        []
+            ).is_err() {
+                log(2, "Failed to write to database");
+                return 0
+            }
+
+            if conn.execute(
+            "CREATE TABLE if not exists database ( 
+                origin TEXT NOT NULL, 
+                usage INTEGER NOT NULL DEFAULT 0, 
+                last_vacuum_time INTEGER NOT NULL DEFAULT 0, 
+                last_analyze_time INTEGER NOT NULL DEFAULT 0, 
+                last_vacuum_size INTEGER NOT NULL DEFAULT 0)",
+        []
+            ).is_err() {
+                log(2, "Failed to write to database");
+                return 0
+            }
+
+            let mut map: HashMap<String,JValue> = HashMap::new();
+            map.insert("savedGame".to_string(), saved_game);
+            map.insert("settings".to_string(), settings);
+
+            let mut usage: i32 = 0;
+            for (key, value) in map {
+                let json = value.to_string();
+
+                let utf16_len = json.encode_utf16().count() as i32;
+                usage += key.encode_utf16().count() as i32;
+                usage += utf16_len;
+
+                let compressed = match Encoder::compress_vec(&mut Encoder::new(), json.as_bytes()) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        log(2, "Failed to compress bytes");
+                        log(2,format!("{e}"));
+                        return 0
+                    }
+                };
+
+                match conn.execute("INSERT into data VALUES (?1, ?2, ?3, ?4, ?5, ?6)", (key.clone(), utf16_len, 1, 1, 0, compressed)) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        log(2, format!("Failed to insert {}", key));
+                        log(2,format!("{e}"));
+                        return 0
+                    }
+                }
+            }
+
+            let timestamp = Utc::now().timestamp_micros();
+            let vacuum = match fs::metadata(path.clone()) {
+                Ok(v) => v.len() as i64,
+                Err(e) => {
+                    log(2, "Unable to read vacuum size");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            };
+
+            match conn.execute("INSERT into database VALUES (?1, ?2, ?3, ?4, ?5)", (domain.clone(), usage, timestamp, 0, vacuum)) {
+                Ok(_) => (),
+                Err(e) => {
+                    log(2, "Failed to insert into main database");
+                    log(2,format!("{e}"));
+                    return 0
+                }
+            }
+
+            for _ in 0..2 {path.pop();}
+            path.push(".metadata-v2");
+
+            //Building metadata file
+            let mut metadata: Vec<u8> = Vec::new();
+            metadata.extend_from_slice(&timestamp.to_be_bytes()); //Timestamp
+            metadata.push(0); //Persisted
+            metadata.extend_from_slice(&(0 as i32).to_be_bytes()); //Suffix
+            metadata.extend_from_slice(&(0 as i32).to_be_bytes()); //Group
+            metadata.extend_from_slice(&(domain.len() as i32).to_be_bytes()); //Length of origin string (domain)
+            metadata.extend_from_slice(domain.as_bytes()); //Origin (domain)
+            metadata.push(0); //Is App
+
+            match fs::write(path.clone(), metadata) {
+                Ok(_) => (),
+                Err(e) => {
+                    log(1, "Failed to write metadata file - skipping");
+                    log(2,format!("{e}"));
+                }
+            }
+            return 1
+        },
+        _ => {
+            log(2, "Attempting to write an unsupported Javascript Format - support should be coming soon!:tm:");
+            return 0
+        }
+    }
+
+    return 1
 }
