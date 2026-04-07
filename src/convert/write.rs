@@ -147,6 +147,8 @@ fn write_early_classic(world: World, dir: PathBuf) -> i32 {
         }
     }
     len = creator.len() as u16;
+    log(-1, format!("Creator name length: {}", creator.len() as u16));
+    log(-1, format!("Creator name amount of bytes: {}", creator.as_bytes().len() as u16));
     bytes.extend_from_slice(&len.to_be_bytes());
     bytes.extend_from_slice(creator.as_bytes());
 
@@ -173,11 +175,15 @@ fn write_early_classic(world: World, dir: PathBuf) -> i32 {
     bytes.extend_from_slice(&(blocks.dims[2] as i16).to_be_bytes());
     bytes.extend_from_slice(&(blocks.dims[1] as i16).to_be_bytes());
 
+    log(-1,format!("Block at 0 is {:?}", blocks.blocks[0]));
+    log(-1,format!("Block at 99999 is {:?}", blocks.blocks[99999]));
+    log(-1,format!("Volume is {}", blocks.dims[0]*blocks.dims[1]*blocks.dims[2]));
+    log(-1,format!("True volume is {}", blocks.blocks.len()));
     for block in blocks.blocks {
         bytes.push(match block.id {
             Value::UByte(b) => b,
             _ => {
-                log(1,format!("Invalid block value found! - Replacing with air"));
+                log(1,format!("Invalid block value {:?} found! - Replacing with air", block));
                 0
             }
         })
@@ -352,6 +358,9 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
             
         },
         JSFormat::Firefox => {
+
+            //A lot of information for this section is courtesy of this: https://www.cclsolutionsgroup.com/post/local-storage-and-session-storage-in-mozilla-firefox-part-1
+
             let domain: String = match url {
                 JSUrl::Classic => "https://classic.minecraft.net".to_string(),
                 JSUrl::Omniarchive => "https://omniarchive.uk".to_string(),
@@ -371,7 +380,7 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
 
             let mut pattern = Regex::new(r#"\?"#).unwrap();
             let mut folder = pattern.replace_all(&domain, "^").to_string();
-            pattern = Regex::new(r#"[\*\:\/]"#).unwrap();
+            pattern = Regex::new(r#"[\*\:\/\"\<\>\|\\]"#).unwrap(); //Pattern based on mozilla docs here: https://hg-edge.mozilla.org/mozilla-central/file/tip/dom/quota/ActorsParent.cpp
             folder = pattern.replace_all(&folder, "+").to_string();
 
             let mut path = dir.clone();

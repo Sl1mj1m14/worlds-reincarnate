@@ -2,7 +2,7 @@ use std::{cell::RefCell, fs, path::PathBuf, sync::Once};
 
 use v8::Local;
 
-use crate::log::log;
+use crate::{log::log, world::{Block, Value}};
 
 const GEN_DIR: &str = "resources/generators";
 
@@ -10,6 +10,12 @@ static V8_INIT: Once = Once::new();
 
 thread_local! {
     static ISOLATE: RefCell<v8::OwnedIsolate> = RefCell::new(v8::Isolate::new(Default::default()));
+}
+
+pub fn air (_edition: String, _version: i32, dims: [i32; 3]) -> Vec<Block> {
+    let block = Block {id: Value::UByte(0), block_data: None};
+    let size = (dims[0]*dims[1]*dims[2]) as usize;
+    vec![block; size]
 }
 
 pub fn javascript (seed: i64, world_size: i32) -> Vec<u8> {

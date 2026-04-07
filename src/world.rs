@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::mem::discriminant;
 
 use serde_json::Value as JValue;
 
@@ -125,7 +127,7 @@ impl Generic for Vec<i64> {
 
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Boolean(bool),
     Byte(i8),
@@ -150,6 +152,165 @@ pub enum Value {
 impl Default for Value {
     fn default() -> Self {
         Value::Null
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Value::Boolean(b1) => {
+                match other {
+                    Value::Boolean(b2) => b1 == b2,
+                    _ => false
+                }
+            },
+            Value::Byte(b1) => {
+                match other {
+                    Value::Byte(b2) => b1 == b2,
+                    _ => false
+                }
+            },
+            Value::UByte(b1) => {
+                match other {
+                    Value::UByte(b2) => b1 == b2,
+                    _ => false
+                }
+            },
+            Value::Short(s1) => {
+                match other {
+                    Value::Short(s2) => s1 == s2,
+                    _ => false
+                }
+            },
+            Value::UShort(s1) => {
+                match other {
+                    Value::UShort(s2) => s1 == s2,
+                    _ => false
+                }
+            },
+            Value::Int(i1) => {
+                match other {
+                    Value::Int(i2) => i1 == i2,
+                    _ => false
+                }
+            },
+            Value::UInt(i1) => {
+                match other {
+                    Value::UInt(i2) => i1 == i2,
+                    _ => false
+                }
+            },
+            Value::Long(l1) => {
+                match other {
+                    Value::Long(l2) => l1 == l2,
+                    _ => false
+                }
+            },
+            Value::ULong(l1) => {
+                match other {
+                    Value::ULong(l2) => l1 == l2,
+                    _ => false
+                }
+            },
+            Value::Float(f1) => {
+                match other {
+                    Value::Float(f2) => f1 == f2,
+                    _ => false
+                }
+            },
+            Value::Double(f1) => {
+                match other {
+                    Value::Double(f2) => f1 == f2,
+                    _ => false
+                }
+            },
+            Value::String(s1) => {
+                match other {
+                    Value::String(s2) => s1 == s2,
+                    _ => false
+                }
+            },
+            Value::List(list1) => {
+                match other {
+                    Value::List(list2) => list1 == list2,
+                    _ => false
+                }
+            },
+            Value::Compound(map1) => { 
+                match other {
+                    Value::Compound(map2) => {
+                        let mut pairs1: Vec<_> = map1.iter().collect();
+                        pairs1.sort_by_key(|&(k, _v)| k);
+                        let mut pairs2: Vec<_> = map1.iter().collect();
+                        pairs2.sort_by_key(|&(k, _v)| k);
+                        return pairs1 == pairs2  
+                    },
+                    _ => false
+                }
+            },
+            Value::ByteArray(list1) => {
+                match other {
+                    Value::ByteArray(list2) => list1 == list2,
+                    _ => false
+                }
+            },
+            Value::IntArray(list1) => {
+                match other {
+                    Value::IntArray(list2) => list1 == list2,
+                    _ => false
+                }
+            },
+            Value::LongArray(list1) => {
+                match other {
+                    Value::LongArray(list2) => list1 == list2,
+                    _ => false
+                }
+            },
+            Value::Null => {
+                match other {
+                    Value::Null => true,
+                    _ => false
+                }
+            },
+        }
+    }
+}
+
+impl Eq for Value {}
+
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        discriminant(self).hash(state);
+        
+        match self {
+            Value::Boolean(b) => b.hash(state),
+            Value::Byte(b) => b.hash(state),
+            Value::UByte(b) => b.hash(state),
+            Value::Short(s) => s.hash(state),
+            Value::UShort(s) => s.hash(state),
+            Value::Int(i) => i.hash(state),
+            Value::UInt(i) => i.hash(state),
+            Value::Long(l) => l.hash(state),
+            Value::ULong(l) => l.hash(state),
+            Value::Float(f) => f.to_bits().hash(state),
+            Value::Double(f) => f.to_bits().hash(state),
+            Value::String(s) => s.hash(state),
+            Value::List(list) => list.hash(state),
+            Value::Compound(map) => {
+                let mut pairs: Vec<_> = map.iter().collect();
+                pairs.sort_by_key(|&(k, _v)| k);
+                for (key, value) in pairs {
+                    key.hash(state);
+                    value.hash(state);
+                }
+            },
+            Value::ByteArray(list) => list.hash(state),
+            Value::IntArray(list) => list.hash(state),
+            Value::LongArray(list) => list.hash(state),
+            Value::Null => (),
+        }
+
+        let _ = state.finish();
     }
 }
 
@@ -185,6 +346,29 @@ impl Value {
                 log(-1, "Unknown json type - library update might have broken something");
                 Value::Null
             }
+        }
+    }
+
+    pub fn type_as_str (&self) -> &str {
+        match self {
+            Value::Boolean(_) => "bool",
+            Value::Byte(_) => "byte",
+            Value::UByte(_) => "ubyte",
+            Value::Short(_) => "short",
+            Value::UShort(_) => "ushort",
+            Value::Int(_) => "int",
+            Value::UInt(_) => "uint",
+            Value::Long(_) => "long",
+            Value::ULong(_) => "ulong",
+            Value::Float(_) => "float",
+            Value::Double(_) => "double",
+            Value::String(_) => "string",
+            Value::List(values) => "list",
+            Value::Compound(hash_map) => "compound",
+            Value::ByteArray(items) => "byte_array",
+            Value::IntArray(items) => "int_array",
+            Value::LongArray(items) => "long_array",
+            Value::Null => "null",
         }
     }
 
@@ -384,7 +568,7 @@ impl Value {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BlockArray {
     pub format: [String; 3], //The order of iterating through the dimensions, should only contain "+/-" xyz
     pub dims: [i32; 3], //World dimensions in xyz format
@@ -401,14 +585,52 @@ impl Default for BlockArray {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Block {
     pub id: Value,
     pub block_data: Option<HashMap<String,Value>>
 }
 
-#[derive(Default, Clone)]
+impl Hash for Block {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+
+        if self.block_data.clone().is_some() {
+            let data = self.block_data.clone().unwrap();
+            let mut pairs: Vec<_> = data.iter().collect();
+            pairs.sort_by_key(|&(k, _v)| k);
+            for (key, value) in pairs {
+                key.hash(state);
+                value.hash(state);
+            }
+        }
+
+        let _ = state.finish();
+        
+    }
+}
+
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Entity {
     pub id: Value,
     pub entity_data: Option<HashMap<String,Value>>
+}
+
+impl Hash for Entity {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+
+        if self.entity_data.clone().is_some() {
+            let data = self.entity_data.clone().unwrap();
+            let mut pairs: Vec<_> = data.iter().collect();
+            pairs.sort_by_key(|&(k, _v)| k);
+            for (key, value) in pairs {
+                key.hash(state);
+                value.hash(state);
+            }
+        }
+
+        let _ = state.finish();
+        
+    }
 }

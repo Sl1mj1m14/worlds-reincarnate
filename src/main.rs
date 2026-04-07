@@ -1,4 +1,4 @@
-use std::{cell::RefCell, error::Error, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
+use std::{cell::RefCell, error::Error, panic, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
 use chrono::prelude::*;
 use enum_iterator::{all};
 use rfd;
@@ -37,6 +37,13 @@ fn main () -> Result<(),Box<dyn Error>>{
 
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
+
+    panic::set_hook(Box::new(|_| {
+        log::log(2,"A thread panicked!!!");
+        log::log(2, "Ending session!");
+        log::close();
+        exit(1)
+    }));
 
     //Creating handlers for conversion
     let input_handler: Rc<RefCell<Handler>> = Rc::new(RefCell::new(Handler::default()));
@@ -295,7 +302,8 @@ fn main () -> Result<(),Box<dyn Error>>{
         //Handling when the program is closed
         ui.window().on_close_requested(||{
             log::close();
-            slint::CloseRequestResponse::HideWindow
+            exit(0);
+            //slint::CloseRequestResponse::HideWindow
         });
 
         ui.run().unwrap();
