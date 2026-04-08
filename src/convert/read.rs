@@ -91,12 +91,32 @@ fn read_early_classic (path: PathBuf) -> Option<World> {
     let mut len = stream2ushort(buffer, &bytes);
     log(-1,format!("World name length is {len}"));
     buffer += 2;
-    world_data.insert("name".to_string(), Value::String(stream2string(buffer, &bytes, len as u32)));
+
+    let mut string_value = match mutf8::decode(&bytes[buffer..(buffer+(len as usize))]) {
+        Ok(val) => val.to_string(),
+        Err(e) => {
+            log(2, "Unable to parse malformed string from classic world - returning");
+            log(2, format!("{e}"));
+            return None
+        },
+    };
+
+    world_data.insert("name".to_string(), Value::String(string_value));
     buffer += len as usize;
 
     len = stream2ushort(buffer, &bytes);
     buffer += 2;
-    world_data.insert("creator".to_string(), Value::String(stream2string(buffer, &bytes, len as u32)));
+
+    string_value = match mutf8::decode(&bytes[buffer..(buffer+(len as usize))]) {
+        Ok(val) => val.to_string(),
+        Err(e) => {
+            log(2, "Unable to parse malformed string from classic world - returning");
+            log(2, format!("{e}"));
+            return None
+        },
+    };
+
+    world_data.insert("creator".to_string(), Value::String(string_value));
     buffer += len as usize;
 
     world_data.insert("createTime".to_string(), Value::Long(stream2long(buffer, &bytes)));
