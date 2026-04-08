@@ -175,10 +175,6 @@ fn write_early_classic(world: World, dir: PathBuf) -> i32 {
     bytes.extend_from_slice(&(blocks.dims[2] as i16).to_be_bytes());
     bytes.extend_from_slice(&(blocks.dims[1] as i16).to_be_bytes());
 
-    log(-1,format!("Block at 0 is {:?}", blocks.blocks[0]));
-    log(-1,format!("Block at 99999 is {:?}", blocks.blocks[99999]));
-    log(-1,format!("Volume is {}", blocks.dims[0]*blocks.dims[1]*blocks.dims[2]));
-    log(-1,format!("True volume is {}", blocks.blocks.len()));
     for block in blocks.blocks {
         bytes.push(match block.id {
             Value::UByte(b) => b,
@@ -293,7 +289,7 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
         "jump" : world_data.get("jump").unwrap_or(&Value::String("<space>".to_string())).as_string().unwrap(),
         "left" : world_data.get("left").unwrap_or(&Value::String("A".to_string())).as_string().unwrap(),
         "loadLoc" : world_data.get("loadLoc").unwrap_or(&Value::String("R".to_string())).as_string().unwrap(),
-        "music" : world_data.get("music").unwrap_or(&Value::Boolean(true)).as_bool().unwrap(),
+        "music" : world_data.get("music").unwrap_or(&Value::Boolean(false)).as_bool().unwrap(),
         "right" : world_data.get("right").unwrap_or(&Value::String("D".to_string())).as_string().unwrap(),
         "saveLoc" : world_data.get("saveLoc").unwrap_or(&Value::String("<enter>".to_string())).as_string().unwrap(),
         "sound" : world_data.get("sound").unwrap_or(&Value::Boolean(true)).as_bool().unwrap(),
