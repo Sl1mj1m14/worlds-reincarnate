@@ -170,10 +170,10 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     }
     new_array.blocks = new_blocks;
 
-    /*if format != new_array.format {
+    if format != new_array.format {
         log(0, "Rotating world");
         new_array = block::rotate_array(new_array.clone(), format);
-    }*/
+    }
 
     let max = [dims[0].max(new_array.dims[0]),dims[1].max(new_array.dims[1]),dims[2].max(new_array.dims[2])];
     if max != new_array.dims {

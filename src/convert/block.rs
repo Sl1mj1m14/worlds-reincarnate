@@ -79,24 +79,21 @@ pub fn create_map(input_edition: String, input_version: i32, output_edition: Str
 pub fn rotate_array (input_array: BlockArray, output_format: [String; 3]) -> BlockArray {
     let mut output_blocks: Vec<Block> = vec![Block::default(); input_array.blocks.len()];
 
-    /******************************************
-    Format of arrays used in this conversion are as follows:
-    [0] = x_mult
-    [1] = flipped_x
-    [2] = y_mult
-    [3] = flipped_y
-    [4] = z_mult
-    [5] = flipped_z
-    ******************************************/
-
     let in_mults: Vec<i32> = format_to_mults(input_array.format, input_array.dims);
     let out_mults: Vec<i32> = format_to_mults(output_format.clone(), input_array.dims);
 
     for x in 0..input_array.dims[0] {
         for y in 0..input_array.dims[1] {
             for z in 0..input_array.dims[2] {
-                output_blocks[(((out_mults[1]-1-x).abs()*out_mults[0])+((out_mults[3]-1-y).abs()*out_mults[2])+((out_mults[5]-1-z).abs()*out_mults[4])) as usize] =
-                input_array.blocks[(((in_mults[1]-1-x).abs()*in_mults[0])+((in_mults[3]-1-y).abs()*in_mults[2])+((in_mults[5]-1-z).abs()*in_mults[4])) as usize].clone()
+                let x1 = (out_mults[0] - x).abs()*out_mults[1];
+                let y1 = (out_mults[2] - y).abs()*out_mults[3];
+                let z1 = (out_mults[4] - z).abs()*out_mults[5];
+
+                let x2 = (in_mults[0] - x).abs()*in_mults[1];
+                let y2 = (in_mults[2] - y).abs()*in_mults[3];
+                let z2 = (in_mults[4] - z).abs()*in_mults[5];
+
+                output_blocks[(x1+y1+z1) as usize] = input_array.blocks[(x2+y2+z2) as usize].clone();
             }
         }
     }
@@ -112,6 +109,7 @@ pub fn rotate_array (input_array: BlockArray, output_format: [String; 3]) -> Blo
 //For example, if the world is going to be 64 blocks from the bottom, the bounds should be 0 and 63
 pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i32; 3]) -> BlockArray {
 
+    //Shrinking is probably broken!
     let mults: Vec<i32> = format_to_mults(world.format.clone(), world.dims);
     let mut output_blocks: Vec<Block> = Vec::new();
 
@@ -125,9 +123,10 @@ pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i
                     y >= lower_bounds[1] && y <= upper_bounds[1] &&
                     z >= lower_bounds[2] && z <= upper_bounds[2]
                 { 
-                    let x1 = (mults[1]-1-x).abs()*mults[0];
-                    let y1 = (mults[3]-1-y).abs()*mults[2];
-                    let z1 = (mults[5]-1-z).abs()*mults[4];
+                    
+                    let x1 = (mults[0] - x).abs()*mults[1];
+                    let y1 = (mults[2] - y).abs()*mults[3];
+                    let z1 = (mults[4] - z).abs()*mults[5];
                     
                     output_blocks.push(world.blocks[(x1+y1+z1) as usize].clone());
                 }
@@ -160,9 +159,9 @@ pub fn grow_world (world: BlockArray, new_dims: [i32; 3], merged_world: Vec<Bloc
 
                 //Only pushing blocks if they are within the old world size
                 if x < world.dims[0] && x < world.dims[1] && x < world.dims[2] { 
-                    let x1 = (mults[1]-1-x).abs()*mults[0];
-                    let y1 = (mults[3]-1-y).abs()*mults[2];
-                    let z1 = (mults[5]-1-z).abs()*mults[4];
+                    let x1 = (mults[0]-x).abs()*mults[1];
+                    let y1 = (mults[2]-y).abs()*mults[3];
+                    let z1 = (mults[4]-z).abs()*mults[5];
 
                     output_blocks[(x1+y1+z1) as usize] = world.blocks[(x1+y1+z1) as usize].clone()
                 }
@@ -179,35 +178,38 @@ pub fn grow_world (world: BlockArray, new_dims: [i32; 3], merged_world: Vec<Bloc
 
 fn format_to_mults (input: [String; 3], dims: [i32; 3]) -> Vec<i32> {
 
-    let mut mults: Vec<i32> = vec![1; 6];
-    let mut second_level: i32 = 1;
+    let mut x_mult: i32 = 1;
+    let mut y_mult: i32 = 1;
+    let mut z_mult: i32 = 1;
+    let mut multiplier = 1;
 
-    match input[0].replace("-","").as_str() {
-        "x" => second_level = dims[0],
-        "y" => second_level = dims[1],
-        "z" => second_level = dims[2],
-        _ => () //Log every time I slept with citty's mom
+    let mut x_base: i32 = 0;
+    let mut y_base: i32 = 0;
+    let mut z_base: i32 = 0;
+
+    for i in 0..3 {
+        let chars: Vec<char> = input[i].chars().collect();
+        match chars[1] {
+            'x' => {
+                if chars[0] == '-' { x_base = dims[0] - 1 }
+                x_mult = multiplier;
+                multiplier *= dims[0];
+            },
+            'y' => {
+                if chars[0] == '-' { y_base = dims[1] - 1 }
+                y_mult = multiplier;
+                multiplier *= dims[1];
+            },
+            'z' => {
+                if chars[0] == '-' { z_base = dims[2] - 1 }
+                z_mult = multiplier;
+                multiplier *= dims[2];
+            },
+            _ => log(1, format!("This should never be seen?? Instead of xyz found {}", chars[1]))
+        }
     }
 
-    match input[1].replace("-","").as_str() {
-        "x" => mults[0] = second_level,
-        "y" => mults[2] = second_level,
-        "z" => mults[4] = second_level,
-        _ => ()
-    }
-
-    match input[2].replace("-","").as_str() {
-        "x" => mults[0] = dims[1] * dims[2],
-        "y" => mults[2] = dims[0] * dims[2],
-        "z" => mults[4] = dims[0] * dims[1],
-        _ => ()
-    }
-
-    if input.contains(&"-x".to_string()) { mults[1] = dims[0]}
-    if input.contains(&"-y".to_string()) { mults[3] = dims[1]}
-    if input.contains(&"-z".to_string()) { mults[5] = dims[2]}
-
-    mults
+    vec![x_base,x_mult,y_base,y_mult,z_base,z_mult]
 }
 
 fn get_block_type (edition: String, version: i32) -> Value {
