@@ -41,13 +41,17 @@ component Settings inherits Rectangle {
 
 component Header inherits Rectangle {
     height: 100px;
+    width: 500px;
     background: Theme.background-primary;
 
     HorizontalLayout {
         spacing: 15px;
-        alignment: stretch;
+        alignment: center;
 
-        HeaderText { text: Versions.input-edition + "    " + Versions.input-version; }
+        HeaderText { 
+            width: (parent.width/2) - 150px;
+            text: Versions.input-edition + "    " + Versions.input-version; 
+        }
         
         Button {
             width: 150px;
@@ -55,11 +59,15 @@ component Header inherits Rectangle {
             clicked => { Versions.convert(); }
         }
 
-        HeaderText { text: Versions.output-edition + "    " + Versions.output-version; }
+        HeaderText { 
+            width: (parent.width/2) - 150px;
+            text: Versions.output-edition + "    " + Versions.output-version; 
+        }
     }
 }
 
 component Input inherits VerticalLayout {
+    in-out property <int> current_state;
     padding: 15px;
 
     input-header := HorizontalLayout {
@@ -70,9 +78,10 @@ component Input inherits VerticalLayout {
             HeaderText {
                 text: "INPUT";
             }
-            Button {
+            browse := Button {
                 text: "x";
                 width: 25px;
+                //enabled: false;
                 clicked => { Versions.browse(); }
             }
         }
@@ -95,11 +104,17 @@ component Input inherits VerticalLayout {
         min-height: 100px;
         horizontal-scrollbar-policy: always-off;
 
-        for version in Versions.input-version-list:
+        for version[index] in Versions.input-version-list:
             Button {
                 height: 25px;
                 text: version.display;
+
+                /*states [
+                   hover when (current_state != index && ) 
+                ]*/
+
                 clicked() => {
+                    current_state = index;
                     Versions.set-version(0, input-edition-box.current-index, version.value);
                     Versions.input-edition = input-edition-box.current-value;
                     Versions.input-version = version.display;
@@ -182,10 +197,12 @@ component Output inherits VerticalLayout {
 
 export component ConvertScreen {
 
+    width: 500px;
+
     VerticalLayout {
         Settings {}
 
-        Header {}
+        Header { width: parent.width; }
 
         body := Rectangle {
             background: Theme.background-primary;

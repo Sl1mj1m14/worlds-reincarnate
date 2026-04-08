@@ -111,33 +111,44 @@ pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i
 
     //Shrinking is probably broken!
     let mults: Vec<i32> = format_to_mults(world.format.clone(), world.dims);
-    let mut output_blocks: Vec<Block> = Vec::new();
+
+    let mut output_dims: [i32; 3] = [0; 3];
+    for i in 0..3 {
+        output_dims[i] = upper_bounds[i]-lower_bounds[i]+1
+    }
+
+    let volume = output_dims[0]*output_dims[1]*output_dims[2];
+    let mut output_blocks: Vec<Block> = vec![Block::default(); volume as usize];
 
     for x in 0..world.dims[0] {
         for y in 0..world.dims[1] {
             for z in 0..world.dims[2] {
 
+                //Flipping coordinates prior to checking if within bounds
+                let mut x1 = (mults[0] - x).abs();
+                let mut y1 = (mults[2] - y).abs();
+                let mut z1 = (mults[4] - z).abs();
+                
                 //Only pushing blocks if they are within the new world size
                 if
-                    x >= lower_bounds[0] && x <= upper_bounds[0] &&
-                    y >= lower_bounds[1] && y <= upper_bounds[1] &&
-                    z >= lower_bounds[2] && z <= upper_bounds[2]
+                    x1 >= lower_bounds[0] && x1 <= upper_bounds[0] &&
+                    y1 >= lower_bounds[1] && y1 <= upper_bounds[1] &&
+                    z1 >= lower_bounds[2] && z1 <= upper_bounds[2]
                 { 
                     
-                    let x1 = (mults[0] - x).abs()*mults[1];
-                    let y1 = (mults[2] - y).abs()*mults[3];
-                    let z1 = (mults[4] - z).abs()*mults[5];
+                    let x2 = (x1 - lower_bounds[0])*mults[1];
+                    let y2 = (y1 - lower_bounds[1])*mults[3];
+                    let z2 = (z1 - lower_bounds[2])*mults[5];
+
+                    x1 *= mults[1];
+                    y1 *= mults[3];
+                    z1 *= mults[5];
                     
-                    output_blocks.push(world.blocks[(x1+y1+z1) as usize].clone());
+                    output_blocks[(x2 + y2 + z2) as usize] = world.blocks[(x1 + y1 + z1) as usize].clone();
                 }
 
             }
         }
-    }
-
-    let mut output_dims: [i32; 3] = [0; 3];
-    for i in 0..3 {
-        output_dims[i] = upper_bounds[i]-lower_bounds[i]+1
     }
 
     BlockArray {
@@ -149,7 +160,8 @@ pub fn shrink_world (world: BlockArray, upper_bounds: [i32; 3], lower_bounds: [i
 }
 
 pub fn grow_world (world: BlockArray, new_dims: [i32; 3], merged_world: Vec<Block>) -> BlockArray {
-
+    //Modify this to specify how the fill works (for example adding air to the bottom of a world as opposed to the top)
+    
     let mults: Vec<i32> = format_to_mults(world.format.clone(), new_dims);
     let mut output_blocks: Vec<Block> = merged_world.clone();
     
@@ -158,7 +170,7 @@ pub fn grow_world (world: BlockArray, new_dims: [i32; 3], merged_world: Vec<Bloc
             for z in 0..new_dims[2] {
 
                 //Only pushing blocks if they are within the old world size
-                if x < world.dims[0] && x < world.dims[1] && x < world.dims[2] { 
+                if x < world.dims[0] && y < world.dims[1] && z < world.dims[2] { 
                     let x1 = (mults[0]-x).abs()*mults[1];
                     let y1 = (mults[2]-y).abs()*mults[3];
                     let z1 = (mults[4]-z).abs()*mults[5];
