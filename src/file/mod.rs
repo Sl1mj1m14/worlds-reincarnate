@@ -20,6 +20,7 @@ pub static JS_URLS: &[&str] = &[
 
 pub enum Dir {
     Home,
+    Data,
     Documents
 }
 
@@ -80,6 +81,10 @@ pub fn get_general_dir(dir: Dir) -> PathBuf {
         Dir::Home => {
             let u = directories::UserDirs::new().unwrap();
             u.home_dir().to_path_buf()
+        },
+        Dir::Data => {
+            let b = directories::BaseDirs::new().unwrap();
+            b.data_dir().to_path_buf()
         },
         Dir::Documents => {
             let u = directories::UserDirs::new().unwrap();

@@ -17,9 +17,13 @@ use crate::{file::*, version::Edition};
 slint::include_modules!();
 
 const DEBUG_FLAG: bool = true;
+const LOCAL_FLAG: bool = true;
 
 static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
+
+static PROJECT_DIR: OnceLock<PathBuf> = OnceLock::new();
+const PROJECT_NAME: &str = "WorldsReincarnate";
 
 #[derive(Clone, Default)]
 pub struct Handler {
@@ -30,6 +34,10 @@ pub struct Handler {
 }
 
 fn main () -> Result<(),Box<dyn Error>>{
+    //Setting main project path
+    let mut project_path: PathBuf = get_general_dir(Dir::Data);
+    project_path.push(PROJECT_NAME);
+    PROJECT_DIR.set(project_path).unwrap();
 
     //Starting Log System
     let timestamp: String = Local::now().format("%Y%m%d%H%M%S").to_string();
