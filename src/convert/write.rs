@@ -135,9 +135,11 @@ fn write_early_classic(world: World, dir: PathBuf) -> i32 {
             _ => ()
         }
     }
-    let mut len = name.len() as u16;
+
+    let mut mutf8 = mutf8::encode(name.as_str());
+    let mut len = mutf8.len() as u16;
     bytes.extend_from_slice(&len.to_be_bytes());
-    bytes.extend_from_slice(name.as_bytes());
+    bytes.extend_from_slice(&mutf8);
 
     let mut creator = "unknown".to_string();
     if world_data.clone().contains_key("creator") {
@@ -146,11 +148,11 @@ fn write_early_classic(world: World, dir: PathBuf) -> i32 {
             _ => ()
         }
     }
-    len = creator.len() as u16;
-    log(-1, format!("Creator name length: {}", creator.len() as u16));
-    log(-1, format!("Creator name amount of bytes: {}", creator.as_bytes().len() as u16));
+
+    mutf8 = mutf8::encode(creator.as_str());
+    len = mutf8.len() as u16;
     bytes.extend_from_slice(&len.to_be_bytes());
-    bytes.extend_from_slice(creator.as_bytes());
+    bytes.extend_from_slice(&mutf8);
 
     let mut create_time: i64 = 0;
     if world_data.clone().contains_key("createTime") {
