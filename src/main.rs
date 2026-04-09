@@ -1,8 +1,10 @@
-use std::{cell::RefCell, error::Error, panic, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
+use std::{cell::RefCell, collections::HashMap, error::Error, fs::{self, File, OpenOptions, create_dir_all, remove_file}, io::Write, panic, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
 use chrono::prelude::*;
 use enum_iterator::{all};
 use rfd;
+use serde::{Deserialize, Serialize};
 use slint::{Model, SharedString};
+use toml::de;
 
 mod log;
 mod functions;
@@ -17,13 +19,31 @@ use crate::{file::*, version::Edition};
 slint::include_modules!();
 
 const DEBUG_FLAG: bool = true;
-const LOCAL_FLAG: bool = true;
+const LOCAL_FLAG: bool = false;
+
+static DEBUG: OnceLock<Debug> = OnceLock::new();
+
+static PROJECT_DIR: OnceLock<PathBuf> = OnceLock::new();
+const PROJECT_NAME: &str = "WorldsReincarnate";
 
 static TIMESTAMP: OnceLock<String> = OnceLock::new();
 const DEFAULT_TIMESTAMP: &str = "19700101120000";
 
-static PROJECT_DIR: OnceLock<PathBuf> = OnceLock::new();
-const PROJECT_NAME: &str = "WorldsReincarnate";
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Debug {
+    pub flag: bool,
+    pub local: bool
+}
+
+impl Default for Debug {
+    fn default() -> Self {
+        Self { 
+            flag: false, 
+            local: false 
+        }
+    }
+}
 
 #[derive(Clone, Default)]
 pub struct Handler {
@@ -34,9 +54,14 @@ pub struct Handler {
 }
 
 fn main () -> Result<(),Box<dyn Error>>{
+    DEBUG.set(debug()).unwrap();
+
     //Setting main project path
-    let mut project_path: PathBuf = get_general_dir(Dir::Data);
-    project_path.push(PROJECT_NAME);
+    let mut project_path: PathBuf = PathBuf::default();
+    if (!DEBUG_FLAG && !DEBUG.get().unwrap().flag) || (!LOCAL_FLAG && !DEBUG.get().unwrap().local) {
+        project_path = get_general_dir(Dir::Data);
+        project_path.push(PROJECT_NAME);
+    }
     PROJECT_DIR.set(project_path).unwrap();
 
     //Starting Log System
@@ -45,6 +70,10 @@ fn main () -> Result<(),Box<dyn Error>>{
 
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
+    if (DEBUG_FLAG || DEBUG.get().unwrap().flag) {
+        log::log(1, "Running in DEBUG MODE");
+        log::log(1, "Potential unexpected behavior and verbose logs");
+    }
 
     panic::set_hook(Box::new(|_| {
         log::log(2,"A thread panicked!!!");
@@ -319,4 +348,37 @@ fn main () -> Result<(),Box<dyn Error>>{
 
     Ok(())
 
+}
+
+fn debug () -> Debug {
+    let mut path: PathBuf = [get_general_dir(Dir::Data), PROJECT_NAME.into()].iter().collect();
+    let mut debug = Debug::default();
+
+    if !path.exists() { create_dir_all(path.clone()).expect("Failed to create project directory!") }
+    path.push("debug.toml");
+
+    match fs::read_to_string(path.clone()) {
+        Ok(s) => {
+            let result: Result<Debug, de::Error> = toml::from_str(&s);
+            debug = match result {
+                Ok(d) => d,
+                Err(_) => {
+                    println!("Corrupted debug file - using defaults");
+                    debug
+                }
+            };
+        },
+        Err(_) => {
+            if path.exists() {
+                println!("Removing corrupt debug file");
+                let _ = remove_file(path.clone());
+            }
+            let mut file = OpenOptions::new().append(true).create_new(true).open(path).expect("Failed to create debug file!");
+            let _ = writeln!(file, "#DEBUG FILE - DO NOT CHANGE FIELDS UNLESS YOU KNOW WHAT YOU ARE DOING!");
+            let toml = toml::to_string(&debug).unwrap();
+            file.write(toml.as_bytes()).expect("Failed to write debug file!");
+        },
+    }
+
+    debug
 }

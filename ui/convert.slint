@@ -41,7 +41,7 @@ component Settings inherits Rectangle {
 
 component Header inherits Rectangle {
     height: 100px;
-    width: 500px;
+    preferred-width: 500px;
     background: Theme.background-primary;
 
     HorizontalLayout {
@@ -197,7 +197,8 @@ component Output inherits VerticalLayout {
 
 export component ConvertScreen {
 
-    width: 500px;
+    preferred-width: 500px;
+    min-width: 200px;
 
     VerticalLayout {
         Settings {}

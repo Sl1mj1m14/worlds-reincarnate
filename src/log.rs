@@ -3,7 +3,7 @@ use std::{fmt::Error, fs::{File, OpenOptions, create_dir_all}, io::Write, path::
 use chrono::Local;
 use colored::{ColoredString, Colorize};
 
-use crate::{DEBUG_FLAG, DEFAULT_TIMESTAMP, TIMESTAMP};
+use crate::{DEBUG, DEBUG_FLAG, DEFAULT_TIMESTAMP, PROJECT_DIR, TIMESTAMP};
 
 const LOG_DIR: &str = "logs";
 const LOG_DEFAULT: &str = "log.txt";
@@ -43,19 +43,24 @@ pub fn start () {
 
     let mut name: String = format!("{}{}{}",base,timestamp,ext);
 
-    let mut path: PathBuf = [LOG_DIR,&name].iter().collect();
+    let mut path: PathBuf = PROJECT_DIR.get().unwrap().clone();
+    path.push(LOG_DIR);
+    path.push(&name);
 
     let mut ver: i16 = 0;
 
     while path.exists() {
+        path.pop();
         ver += 1;
         name = format!("{}{}-{}{}",base,timestamp,ver,ext);
-        path = [LOG_DIR,&name].iter().collect();
+        path.push(&name);
     }
 
-    LOG_NAME.set(name).unwrap();
-    
-    let _ = create_dir_all(LOG_DIR);
+    LOG_NAME.set(name.clone()).unwrap();
+    path.pop();
+    let _ = create_dir_all(path.clone());
+    path.push(&name);
+
     match File::create(path) {
         Ok(_) => (),
         Err(_) => panic!("Failed to start logging!")
@@ -63,12 +68,14 @@ pub fn start () {
 }
 
 pub fn log (code: i8, input: impl Msg) {
-    if code == -1 && !DEBUG_FLAG {return}
+    if code == -1 && !DEBUG_FLAG && !DEBUG.get().unwrap().flag {return}
 
     let mut msg: String = Msg::to_msg(&input);
     let timestamp: String = Local::now().format("%Y-%m-%d %H:%M:%S : ").to_string();
 
-    let path: PathBuf = [LOG_DIR,LOG_NAME.get().unwrap_or(&LOG_DEFAULT.to_string())].iter().collect();
+    let mut path: PathBuf = PROJECT_DIR.get().unwrap().clone();
+    path.push(LOG_DIR);
+    path.push(LOG_NAME.get().unwrap_or(&LOG_DEFAULT.to_string()));
 
     let log_file = OpenOptions::new()
         .create(true)
