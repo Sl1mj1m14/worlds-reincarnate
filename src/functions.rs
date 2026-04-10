@@ -18,14 +18,6 @@ pub fn path2stream (path: PathBuf) -> Option<Vec<u8>> {
     Some(bytes)
 }
 
-pub fn stream2string (buf: usize, stream: &[u8], len: u32) -> String {
-    let mut chars: Vec<char> = Vec::new();
-    for i in 0..len {
-        chars.push(stream[buf+(i as usize)] as char);
-    }   
-    return chars.iter().collect();
-}
-
 pub fn stream2short (buf: usize, stream: &[u8]) -> i16 {
     let slice: [u8; 2] = stream[buf..buf+2].try_into().unwrap_or_default();
     i16::from_be_bytes(slice)

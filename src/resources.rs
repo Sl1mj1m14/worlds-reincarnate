@@ -175,7 +175,7 @@ pub fn download (resource: Resource) -> bool {
             return false
         }
     };
-    let mut path = info.path.clone();
+    let path = info.path.clone();
 
     let result = CLIENT.get().unwrap().get(info.url.clone()).send();
     match result {

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use enum_iterator::Sequence;
 
-use crate::{log::log, version::{self, JAVASCRIPT_EDITION}};
+use crate::{log::log, version};
 
 pub static JS_FORMATS: &[&str] = &[
     "Raw (Json)",
