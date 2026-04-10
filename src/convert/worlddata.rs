@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use csv::StringRecord;
 
-use crate::{convert::MAP_DIR, log::log};
+use crate::{PROJECT_DIR, convert::MAP_DIR, log::log, resources::{self, Map, Resource}};
 
 pub const WORLD_DATA_FILE_NAME: &str = "world_data.csv";
 
@@ -13,7 +13,7 @@ pub struct Data {
 }
 
 pub fn create_map(input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Data, Data>> {
-    let path: PathBuf = [MAP_DIR, WORLD_DATA_FILE_NAME].iter().collect();
+    let path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Map(Map::WorldData)].path.clone();
 
     if !path.exists() {
         log(2, "World data map not found, unable to convert world!");

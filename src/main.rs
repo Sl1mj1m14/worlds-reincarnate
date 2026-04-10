@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, error::Error, fs::{self, File, OpenOptions, create_dir_all, remove_file}, io::Write, panic, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
+use std::{cell::RefCell, error::Error, fs::{self, OpenOptions, create_dir_all, remove_file}, io::Write, panic, path::PathBuf, process::exit, rc::Rc, sync::{Arc, Mutex, OnceLock}, thread};
 use chrono::prelude::*;
 use enum_iterator::{all};
 use rfd;
@@ -7,6 +7,7 @@ use slint::{Model, SharedString};
 use toml::de;
 
 mod log;
+mod resources;
 mod functions;
 mod file;
 
@@ -70,11 +71,12 @@ fn main () -> Result<(),Box<dyn Error>>{
 
     log::start();
     log::log(0,format!("Session Started at {}",Local::now().format("%Y-%m-%d %H:%M:%S")));
-    if (DEBUG_FLAG || DEBUG.get().unwrap().flag) {
+    if DEBUG_FLAG || DEBUG.get().unwrap().flag {
         log::log(1, "Running in DEBUG MODE");
         log::log(1, "Potential unexpected behavior and verbose logs");
     }
 
+    //Setting multithreaded panics to crash the program
     panic::set_hook(Box::new(|_| {
         log::log(2,"A thread panicked!!!");
         log::log(2, "Ending session!");
@@ -95,6 +97,7 @@ fn main () -> Result<(),Box<dyn Error>>{
     let clone_editions = all_editions.clone();
     thread::scope(|s| {
         s.spawn(|| {
+            resources::initialize();
 
             let mut unlocked_editions = clone_editions.lock().unwrap();
 
@@ -374,7 +377,7 @@ fn debug () -> Debug {
                 let _ = remove_file(path.clone());
             }
             let mut file = OpenOptions::new().append(true).create_new(true).open(path).expect("Failed to create debug file!");
-            let _ = writeln!(file, "#DEBUG FILE - DO NOT CHANGE FIELDS UNLESS YOU KNOW WHAT YOU ARE DOING!");
+            let _ = writeln!(file, "#DEBUG FILE - DO NOT CHANGE FIELDS UNLESS YOU KNOW WHAT YOU ARE DOING!\n");
             let toml = toml::to_string(&debug).unwrap();
             file.write(toml.as_bytes()).expect("Failed to write debug file!");
         },

@@ -2,7 +2,7 @@ use std::{cell::RefCell, fs, path::PathBuf, sync::Once};
 
 use v8::Local;
 
-use crate::{log::log, world::{Block, Value}};
+use crate::{log::log, resources::{self, Generator, Resource, check_hash, download}, world::{Block, Value}};
 
 const GEN_DIR: &str = "resources/generators";
 
@@ -37,10 +37,13 @@ pub fn javascript (seed: i64, world_size: i32) -> Vec<u8> {
         let scope = &v8::ContextScope::new(handle_scope, context);
 
         //Loading in script
-        let path: PathBuf = [GEN_DIR,"RandomLevelWorker.js"].iter().collect();
-        if !path.exists() {
-            log(1, "Javascript Generator Missing!");
-            return
+        let path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Generator(Generator::Javascript)].path.clone();
+        if !check_hash(Resource::Generator(Generator::Javascript)) {
+            log(0, "Downloading Javascript Generator!");
+            if !download(Resource::Generator(Generator::Javascript)) {
+                log(1, "Failed to download generator!");
+                return
+            }
         }
 
         let mut string: String = match fs::read_to_string(path) {

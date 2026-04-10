@@ -2,10 +2,7 @@
 
 use std::{io::{Error,ErrorKind}, path::PathBuf};
 
-use crate::log::log;
-
-const SAMVID_DIR: &str = "resources";
-const FILE_NAME: &str = "samvid.csv";
+use crate::{log::log, resources::{self, Resource}};
 
 pub const JAVA_EDITION: &str = "java";
 pub const JAVASCRIPT_EDITION: &str = "classicjs";
@@ -33,12 +30,9 @@ pub struct Edition {
 }
 
 pub fn get () -> Result<Vec<Edition>,Error> {
-    let path: PathBuf = [SAMVID_DIR,FILE_NAME].iter().collect();
+    let path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Samvid].path.clone();
 
-    if !path.exists() {
-        //Handle downloading from resource page
-        return Err(Error::from(ErrorKind::NotFound))
-    }
+    if !path.exists() { return Err(Error::from(ErrorKind::NotFound)) }
 
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)

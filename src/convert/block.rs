@@ -2,13 +2,13 @@ use std::{collections::HashMap, path::PathBuf};
 
 use csv::StringRecord;
 
-use crate::{convert::MAP_DIR, log::log, version::{JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value}};
+use crate::{PROJECT_DIR, convert::MAP_DIR, log::log, resources::{self, Resource, Map}, version::{JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value}};
 
 pub const BLOCK_ID_FILE_NAME: &str = "block_ids.csv";
 
 pub fn create_map(input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Block, Block>> {
     
-    let path: PathBuf = [MAP_DIR, BLOCK_ID_FILE_NAME].iter().collect();
+    let path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Map(Map::Block)].path.clone();
 
     if !path.exists() {
         log(2, "Block map not found, unable to convert world!");
