@@ -8,8 +8,6 @@ mod block;
 mod worlddata;
 mod generate;
 
-pub const MAP_DIR: &str = "resources/maps";
-
 #[derive(Clone)]
 pub struct Converter {
     worlddata_map: HashMap<Data, Data>,
@@ -178,6 +176,7 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     let max = [dims[0].max(new_array.dims[0]),dims[1].max(new_array.dims[1]),dims[2].max(new_array.dims[2])];
     if max != new_array.dims {
         log(0, "Growing world");
+        //Eventually set the seed outside using the default for the OUTPUT edition
         let mut generated: Vec<Block> = Vec::new();
         match output_edition.as_str() {
             JAVA_EDITION => {

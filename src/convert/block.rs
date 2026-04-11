@@ -2,9 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use csv::StringRecord;
 
-use crate::{PROJECT_DIR, convert::MAP_DIR, log::log, resources::{self, Resource, Map}, version::{JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value}};
-
-pub const BLOCK_ID_FILE_NAME: &str = "block_ids.csv";
+use crate::{log::log, resources::{self, Resource, Map}, version::{JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value}};
 
 pub fn create_map(input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Block, Block>> {
     
@@ -224,7 +222,7 @@ fn format_to_mults (input: [String; 3], dims: [i32; 3]) -> Vec<i32> {
     vec![x_base,x_mult,y_base,y_mult,z_base,z_mult]
 }
 
-fn get_block_type (edition: String, version: i32) -> Value {
+fn get_block_type (edition: String, _version: i32) -> Value {
     match edition.as_str() {
         JAVA_EDITION => Value::UByte(0),
         JAVASCRIPT_EDITION => Value::UByte(0),

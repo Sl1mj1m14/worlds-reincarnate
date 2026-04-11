@@ -2,9 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use csv::StringRecord;
 
-use crate::{PROJECT_DIR, convert::MAP_DIR, log::log, resources::{self, Map, Resource}};
-
-pub const WORLD_DATA_FILE_NAME: &str = "world_data.csv";
+use crate::{log::log, resources::{self, Map, Resource}};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Data {

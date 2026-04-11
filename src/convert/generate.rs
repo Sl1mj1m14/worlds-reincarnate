@@ -4,8 +4,6 @@ use v8::Local;
 
 use crate::{log::log, resources::{self, Generator, Resource, check_hash, download}, world::{Block, Value}};
 
-const GEN_DIR: &str = "resources/generators";
-
 static V8_INIT: Once = Once::new();
 
 thread_local! {
