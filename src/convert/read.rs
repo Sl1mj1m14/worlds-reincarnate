@@ -85,7 +85,7 @@ fn read_early_classic (path: PathBuf) -> Option<World> {
         //Attempt to open with regular classic
         return None
     }
-    world_data.insert("version".to_string(), Value::Byte(1));
+    world_data.insert("version".to_string(), Value::UByte(1));
     buffer += 1;
 
     let mut len = stream2ushort(buffer, &bytes);
