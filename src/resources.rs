@@ -4,7 +4,7 @@ use csv;
 use reqwest::blocking::Client;
 use sha2::{Digest, Sha256};
 
-use crate::{PROJECT_DIR, log::log};
+use crate::{PROJECT_DIR, VERSION, log::log};
 
 const SHEET_ID: &str = "1_B371N-C69SWg5LEHa5YXKv9X6IL-EBagwsQxZ9NCTo";
 
@@ -90,6 +90,12 @@ pub fn initialize () {
             map.insert(clean.get(0).unwrap().to_uppercase(), clean.get(1).unwrap().to_lowercase());
         }
     };
+
+    let version = map.get("VERSION");
+    if version.is_some() && version.unwrap() != VERSION {
+        log(1, format!("Converter Version `{}` is outdated, consider updating to `{}`",VERSION, version.unwrap()));
+    }
+
     let mut hashes: HashMap<Resource, Info> = HashMap::new();
 
     hashes.insert(

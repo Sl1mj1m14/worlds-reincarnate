@@ -19,6 +19,8 @@ use crate::{file::*, version::Edition};
 
 slint::include_modules!();
 
+const VERSION: &str = "a0.1.0-dev";
+
 const DEBUG_FLAG: bool = true;
 const LOCAL_FLAG: bool = false;
 
