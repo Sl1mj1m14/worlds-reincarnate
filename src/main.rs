@@ -77,8 +77,9 @@ fn main () -> Result<(),Box<dyn Error>>{
     }
 
     //Setting multithreaded panics to crash the program
-    panic::set_hook(Box::new(|_| {
+    panic::set_hook(Box::new(|e| {
         log::log(2,"A thread panicked!!!");
+        log::log(2, format!("{e}"));
         log::log(2, "Ending session!");
         log::close();
         exit(1)
