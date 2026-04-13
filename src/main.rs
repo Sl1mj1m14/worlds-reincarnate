@@ -331,9 +331,15 @@ fn main () -> Result<(),Box<dyn Error>>{
                         Argument::JSUrl(url) => {
                             match url {
                                 JSUrl::LocalHost(_) => {
-                                    let port = ui.global::<Versions>().get_input_js_url_port() as u16;
+                                    let i = ui.global::<Versions>().get_input_js_url_port();
+                                    let port = i as u16;
+                                    if port as i32 != i {
+                                        log::log(1, format!("Warning - '{i}' is an invalid port number, setting it to 65535 instead"));
+                                        log::log(1, format!("If you wish to circumvent this issue, consider choosing \"Other\""));
+                                    }
                                     updated_args.push(Argument::JSUrl(JSUrl::LocalHost(port)));
                                     log::log(-1, format!("Port is: {port}"));
+
                                 },
                                 JSUrl::Other(_) => {
                                     let other = ui.global::<Versions>().get_input_js_url_other().to_string();
@@ -356,7 +362,12 @@ fn main () -> Result<(),Box<dyn Error>>{
                         Argument::JSUrl(url) => {
                             match url {
                                 JSUrl::LocalHost(_) => {
-                                    let port = ui.global::<Versions>().get_output_js_url_port() as u16;
+                                    let i = ui.global::<Versions>().get_output_js_url_port();
+                                    let port = i as u16;
+                                    if port as i32 != i {
+                                        log::log(1, format!("Warning - '{i}' is an invalid port number, setting it to 65535 instead"));
+                                        log::log(1, format!("If you wish to circumvent this issue, consider choosing \"Other\""));
+                                    }
                                     updated_args.push(Argument::JSUrl(JSUrl::LocalHost(port)));
                                     log::log(-1, format!("Port is: {port}"));
                                 },

@@ -92,6 +92,7 @@ fn convert_worlddata (converter: Converter, world: World, _output_edition: Strin
             Some(v) => v,
             None => {
                 log(1, format!("{key} no longer exists, removing"));
+                log(-1, format!("type is {}", vtype.clone()));
                 continue
             }
         };
