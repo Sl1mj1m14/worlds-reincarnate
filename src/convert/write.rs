@@ -364,7 +364,7 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
                 JSUrl::Omniarchive => "https://omniarchive.uk".to_string(),
                 JSUrl::LocalHost(port) => format!("http://localhost:{port}"), //Test parsing with good laptop
                 JSUrl::Other(site) => {
-                    let pattern = Regex::new(r#"^[a-zA-Z0-9\.\+-]+:\/\/[^\/\#\\]+"#).unwrap(); //Pattern to match "scheme://hostname" - removing any sub folders
+                    let pattern = Regex::new(r#"^[a-zA-Z0-9\.\+-]+://[^/\#\\]+"#).unwrap(); //Pattern to match "scheme://hostname" - removing any sub folders
                     let captures = pattern.captures(&site);
                     match captures {
                         Some(c) => c[0].to_string(),
@@ -377,10 +377,13 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
             };
 
             let mut pattern = Regex::new(r#"\?"#).unwrap();
+            log(-1, "Regex 1 is fine");
             let mut folder = pattern.replace_all(&domain, "^").to_string();
-            pattern = Regex::new(r#"[\*\:\/\"\<\>\|\\]"#).unwrap(); //Pattern based on mozilla docs here: https://hg-edge.mozilla.org/mozilla-central/file/tip/dom/quota/ActorsParent.cpp
+            pattern = Regex::new(r#"[:\*\"\\/\|<>]"#).unwrap(); //Pattern based on mozilla docs here: https://hg-edge.mozilla.org/mozilla-central/file/tip/dom/quota/ActorsParent.cpp
+            log(-1, "Regex 2 is fine");
             folder = pattern.replace_all(&folder, "+").to_string();
 
+            log(-1, format!("Folder name is {}",folder.clone()));
             let mut path = dir.clone();
             path.push(folder);
 

@@ -1,4 +1,4 @@
-import { Button, ComboBox, ListView, VerticalBox } from "std-widgets.slint";
+import { Button, ComboBox, ListView, VerticalBox, LineEdit } from "std-widgets.slint";
 import { Theme } from "themes/theme.slint";
 import { HeaderText, ThemeText } from "components.slint";
 
@@ -19,10 +19,16 @@ export global Versions {
     in-out property <string> input-version;
     in-out property <[Version]> input-version-list;
 
+    in-out property <int> input-js-url-port : 8000;
+    in-out property <string> input-js-url-other : "https://classic.minecraft.net";
+
     in-out property <string> output-state;
     in-out property <string> output-edition;
     in-out property <string> output-version;
     in-out property <[Version]> output-version-list;
+
+    in-out property <int> output-js-url-port : 8000;
+    in-out property <string> output-js-url-other : "https://classic.minecraft.net";
 
     in-out property <[string]> js-format-list;
     in-out property <[string]> js-url-list;
@@ -62,6 +68,53 @@ component Header inherits Rectangle {
         HeaderText { 
             width: (parent.width/2) - 150px;
             text: Versions.output-edition + "    " + Versions.output-version; 
+        }
+    }
+}
+
+component InputJsBox inherits VerticalBox {
+    ThemeText { text: "Choose Format:"; }
+    js-format := ComboBox {
+        model: Versions.js-format-list;
+        selected(_) => {
+            Versions.update-args(0, Versions.input-state, [js-format.current-index, js-url.current-index])
+        }
+    }
+    HorizontalLayout {
+        spacing: 5px;
+        VerticalLayout {
+            spacing: 5px;
+            ThemeText { text: "Choose Url:"; }
+            js-url := ComboBox {
+                model: Versions.js-url-list;
+                selected(_) => {
+                    Versions.update-args(0, Versions.input-state, [js-format.current-index, js-url.current-index])
+                }
+            }
+        }  
+
+        if (js-url.current-index == 2) : VerticalLayout {
+            spacing: 5px;
+            ThemeText { text: "Port:"; }
+            LineEdit {
+                input-type: number;
+                placeholder-text: Versions.input-js-url-port;
+                edited(text) => {
+                    Versions.input-js-url-port = text.to-float()
+                }
+            }
+        }
+
+        if (js-url.current-index == 3) : VerticalLayout {
+            spacing: 5px;
+            ThemeText { text: "Full Url:"; }
+            LineEdit {
+                input-type: text;
+                placeholder-text: Versions.input-js-url-other;
+                edited(text) => {
+                    Versions.input-js-url-other = text
+                }
+            }
         }
     }
 }
@@ -122,19 +175,51 @@ component Input inherits VerticalLayout {
             }
     }
 
-    if (Versions.input-state == Constants.js-value) : VerticalBox {
-        ThemeText { text: "Choose Format:"; }
-        js-format := ComboBox {
-            model: Versions.js-format-list;
-            selected(_) => {
-                Versions.update-args(0, Versions.input-state, [js-format.current-index, js-url.current-index])
+    if (Versions.input-state == Constants.js-value) : InputJsBox {}
+}
+
+component OutputJsBox inherits VerticalBox {
+    ThemeText { text: "Choose Format:"; }
+    js-format := ComboBox {
+        model: Versions.js-format-list;
+        selected(_) => {
+            Versions.update-args(1, Versions.output-state, [js-format.current-index, js-url.current-index])
+        }
+    }
+    HorizontalLayout {
+        spacing: 5px;
+        VerticalLayout {
+            spacing: 5px;
+            ThemeText { text: "Choose Url:"; }
+            js-url := ComboBox {
+                model: Versions.js-url-list;
+                selected(_) => {
+                    Versions.update-args(1, Versions.output-state, [js-format.current-index, js-url.current-index])
+                }
+            }
+        }  
+
+        if (js-url.current-index == 2) : VerticalLayout {
+            spacing: 5px;
+            ThemeText { text: "Port:"; }
+            LineEdit {
+                input-type: number;
+                placeholder-text: Versions.output-js-url-port;
+                edited(text) => {
+                    Versions.output-js-url-port = text.to-float()
+                }
             }
         }
-        ThemeText { text: "Choose Url:"; }
-        js-url := ComboBox {
-            model: Versions.js-url-list;
-            selected(_) => {
-                Versions.update-args(0, Versions.input-state, [js-format.current-index, js-url.current-index])
+
+        if (js-url.current-index == 3) : VerticalLayout {
+            spacing: 5px;
+            ThemeText { text: "Full Url:"; }
+            LineEdit {
+                input-type: text;
+                placeholder-text: Versions.output-js-url-other;
+                edited(text) => {
+                    Versions.output-js-url-other = text
+                }
             }
         }
     }
@@ -177,22 +262,7 @@ component Output inherits VerticalLayout {
             }
     }
 
-    if (Versions.output-state == Constants.js-value) : VerticalBox {
-        ThemeText { text: "Choose Format:"; }
-        js-format := ComboBox {
-            model: Versions.js-format-list;
-            selected(_) => {
-                Versions.update-args(1, Versions.output-state, [js-format.current-index, js-url.current-index])
-            }
-        }
-        ThemeText { text: "Choose Url:"; }
-        js-url := ComboBox {
-            model: Versions.js-url-list;
-            selected(_) => {
-                Versions.update-args(1, Versions.output-state, [js-format.current-index, js-url.current-index])
-            }
-        }
-    }
+    if (Versions.output-state == Constants.js-value) : OutputJsBox {}
 }
 
 export component ConvertScreen {
@@ -207,10 +277,14 @@ export component ConvertScreen {
 
         body := Rectangle {
             background: Theme.background-primary;
+            preferred-width: parent.width;
 
             HorizontalLayout {
-                Input {}
-                Output {}
+                preferred-width: parent.width;
+                horizontal-stretch: -1;
+
+                Input { preferred-width: parent.width/2; }
+                Output { preferred-width: parent.width/2; }
             }
         }
     }

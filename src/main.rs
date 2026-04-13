@@ -322,7 +322,59 @@ fn main () -> Result<(),Box<dyn Error>>{
             };
 
             clone_output.borrow_mut().path = path;
+
             //In certain cases, arguments may need to be updated...
+            if clone_input.borrow_mut().args.is_some() {
+                let mut updated_args: Vec<Argument> = Vec::new();
+                for arg in clone_input.borrow_mut().clone().args.unwrap() {
+                    match arg {
+                        Argument::JSUrl(url) => {
+                            match url {
+                                JSUrl::LocalHost(_) => {
+                                    let port = ui.global::<Versions>().get_input_js_url_port() as u16;
+                                    updated_args.push(Argument::JSUrl(JSUrl::LocalHost(port)));
+                                    log::log(-1, format!("Port is: {port}"));
+                                },
+                                JSUrl::Other(_) => {
+                                    let other = ui.global::<Versions>().get_input_js_url_other().to_string();
+                                    updated_args.push(Argument::JSUrl(JSUrl::Other(other.clone())));
+                                    log::log(-1, format!("Other website is: {other}"));
+                                },
+                                _ => updated_args.push(Argument::JSUrl(url))
+                            }
+                        },
+                        _ => updated_args.push(arg),
+                    }
+                }
+                clone_input.borrow_mut().args = Some(updated_args)
+            }
+
+            if clone_output.borrow_mut().args.is_some() {
+                let mut updated_args: Vec<Argument> = Vec::new();
+                for arg in clone_output.borrow_mut().clone().args.unwrap() {
+                    match arg {
+                        Argument::JSUrl(url) => {
+                            match url {
+                                JSUrl::LocalHost(_) => {
+                                    let port = ui.global::<Versions>().get_output_js_url_port() as u16;
+                                    updated_args.push(Argument::JSUrl(JSUrl::LocalHost(port)));
+                                    log::log(-1, format!("Port is: {port}"));
+                                },
+                                JSUrl::Other(_) => {
+                                    let other = ui.global::<Versions>().get_output_js_url_other().to_string();
+                                    updated_args.push(Argument::JSUrl(JSUrl::Other(other.clone())));
+                                    log::log(-1, format!("Other website is: {other}"));
+                                },
+                                _ => updated_args.push(Argument::JSUrl(url))
+                            }
+                        },
+                        _ => updated_args.push(arg),
+                    }
+                }
+                clone_output.borrow_mut().args = Some(updated_args)
+            }
+
+
 
             let local_input = clone_input.borrow_mut().clone();
             let local_output = clone_output.borrow_mut().clone();
