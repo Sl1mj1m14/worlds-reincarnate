@@ -283,7 +283,7 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
         "backward" : world_data.get("backward").unwrap_or(&Value::String("S".to_string())).as_string().unwrap(),
         "build" : world_data.get("build").unwrap_or(&Value::String("B".to_string())).as_string().unwrap(),
         "chat" : world_data.get("chat").unwrap_or(&Value::String("T".to_string())).as_string().unwrap(),
-        "drawDistance" : world_data.get("drawDistance").unwrap_or(&Value::Byte(0)).as_i8().unwrap(),
+        "drawDistance" : world_data.get("drawDistance").unwrap_or(&Value::UByte(0)).as_u8().unwrap(),
         "fog" : world_data.get("fog").unwrap_or(&Value::String("F".to_string())).as_string().unwrap(),
         "forward" : world_data.get("forward").unwrap_or(&Value::String("W".to_string())).as_string().unwrap(),
         "fps" : world_data.get("fps").unwrap_or(&Value::Boolean(false)).as_bool().unwrap(),

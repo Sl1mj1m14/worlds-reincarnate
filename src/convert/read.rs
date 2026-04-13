@@ -362,6 +362,10 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
 
     if settings_json.as_object().is_some() {
         for (key, value) in settings_json.as_object().unwrap() {
+            if key == "drawDistance" {
+                world_data.insert(key.clone(), Value::UByte(value.as_i64().unwrap() as u8));
+                continue
+            }
             world_data.insert(key.clone(), Value::json_to_value(value.clone()));
         }
     }

@@ -26,7 +26,6 @@ pub fn convert(input: Handler, output: Handler) {
     };
 
     log(0,"Converting world...");
-    log(0,"Or rather, pretending to...");
 
     //Implement converting you fool...
     let world_data = match worlddata::create_map(world.clone().edition, world.clone().version, output.edition.clone(), output.version) {

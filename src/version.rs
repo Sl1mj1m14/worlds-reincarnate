@@ -45,7 +45,7 @@ pub fn get () -> Result<Vec<Edition>,Error> {
     let mut edition_id: String = String::default();
 
 
-    for (_, line) in reader.records().enumerate() {
+    for (index, line) in reader.records().enumerate() {
         let clean = line?;
         let identifier = clean.get(0).unwrap();
         let display = clean.get(1).unwrap();
@@ -59,7 +59,7 @@ pub fn get () -> Result<Vec<Edition>,Error> {
                         display: edition_display,
                         versions: versions
                     });
-                } else {
+                } else if index != 0 {
                     log(1, format!("Current version of the converter does not support any versions for {} - skipping", edition_display.clone()));
                 }
                 edition_display = display.to_string();
