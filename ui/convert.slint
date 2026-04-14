@@ -1,6 +1,6 @@
 import { Button, ComboBox, ListView, VerticalBox, LineEdit } from "std-widgets.slint";
 import { Theme } from "themes/theme.slint";
-import { HeaderText, ThemeText } from "components.slint";
+import { HeaderText, ThemeText, HoverButton } from "components.slint";
 
 struct Version {
     display: string,
@@ -13,6 +13,8 @@ export global Constants {
 
 export global Versions {
     in-out property <[string]> editions;
+    in-out property <bool> browse-state : false;
+    in-out property <bool> convert-state : false;
 
     in-out property <string> input-state;
     in-out property <string> input-edition;
@@ -61,7 +63,8 @@ component Header inherits Rectangle {
         
         Button {
             width: 150px;
-            text: "[PLACEHOLDER]";
+            text: "[CONVERT]";
+            enabled: Versions.convert-state;
             clicked => { Versions.convert(); }
         }
 
@@ -120,7 +123,7 @@ component InputJsBox inherits VerticalBox {
 }
 
 component Input inherits VerticalLayout {
-    in-out property <int> current_state;
+    in-out property <int> current_state : -1;
     padding: 15px;
 
     input-header := HorizontalLayout {
@@ -132,9 +135,11 @@ component Input inherits VerticalLayout {
                 text: "INPUT";
             }
             browse := Button {
-                text: "x";
-                width: 25px;
-                //enabled: false;
+                icon: @image-url("assets/icons/folder-icon.png");
+                icon-size: 20px;
+                enabled: Versions.browse-state;
+                //width: 25px;
+                //height: 25px;
                 clicked => { Versions.browse(); }
             }
         }
@@ -145,6 +150,7 @@ component Input inherits VerticalLayout {
     input-edition-box := ComboBox {
         model: Versions.editions;
         selected(val) => {
+            current_state = -1;
             Versions.set-edition(0, input-edition-box.current-index);
             Versions.input-edition = val;
             Versions.input-version = "";
@@ -158,13 +164,34 @@ component Input inherits VerticalLayout {
         horizontal-scrollbar-policy: always-off;
 
         for version[index] in Versions.input-version-list:
-            Button {
+            HoverButton {
                 height: 25px;
+                border-radius: 5px;
                 text: version.display;
 
-                /*states [
-                   hover when (current_state != index && ) 
-                ]*/
+                states [
+                   hover when (current_state != index && self.has_hover) : {
+                        enabled: true;
+                        background: Theme.background-secondary;
+                        border-width: 4px;
+                        border-color: Theme.highlight-primary;
+                        in-out {
+                            animate * { duration : 1000ms; }
+                        }  
+                   }
+                   enabled when (current_state != index && !self.has_hover) : {
+                        enabled: true;
+                        background: Theme.background-secondary;
+                        border-width: 0.5px;
+                        border-color: Theme.background-primary;
+                   }
+                   disabled when (current_state == index) : {
+                        enabled : false;
+                        background: Theme.background-primary;
+                        border-width: 1px;
+                        border-color: Theme.background-secondary;
+                   }
+                ]
 
                 clicked() => {
                     current_state = index;
@@ -226,10 +253,12 @@ component OutputJsBox inherits VerticalBox {
 }
 
 component Output inherits VerticalLayout {
+    in-out property <int> current_state : -1;
+
     padding: 15px;
 
     HeaderText { 
-        height: 30px; 
+        height: 33px; 
         text: "OUTPUT"; 
     }
 
@@ -238,6 +267,7 @@ component Output inherits VerticalLayout {
     output-edition-box := ComboBox {
         model: Versions.editions;
         selected(val) => {
+            current_state = -1;
             Versions.set-edition(1, output-edition-box.current-index);
             Versions.output-edition = val;
             Versions.output-version = "";
@@ -250,11 +280,37 @@ component Output inherits VerticalLayout {
         min-height: 100px;
         horizontal-scrollbar-policy: always-off;
 
-        for version in Versions.output-version-list:
-            Button {
+        for version[index] in Versions.output-version-list:
+            HoverButton {
                 height: 25px;
+                border-radius: 5px;
                 text: version.display;
+
+                states [
+                   hover when (current_state != index && self.has_hover) : {
+                        enabled: true;
+                        background: Theme.background-secondary;
+                        border-width: 4px;
+                        border-color: Theme.highlight-primary;
+                        in-out {
+                            animate * { duration : 1000ms; }
+                        }    
+                   }
+                   enabled when (current_state != index && !self.has_hover) : {
+                        enabled: true;
+                        background: Theme.background-secondary;
+                        border-width: 0.5px;
+                        border-color: Theme.background-primary;
+                   }
+                   disabled when (current_state == index) : {
+                        enabled : false;
+                        background: Theme.background-primary;
+                        border-width: 1px;
+                        border-color: Theme.background-secondary;
+                   }
+                ]
                 clicked() => {
+                    current_state = index;
                     Versions.set-version(1, output-edition-box.current-index, version.value);
                     Versions.output-edition = output-edition-box.current-value;
                     Versions.output-version = version.display;

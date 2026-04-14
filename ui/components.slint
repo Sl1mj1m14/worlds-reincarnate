@@ -10,5 +10,15 @@ export component HeaderText inherits ThemeText {
 }
 
 export component HoverButton inherits Rectangle {
-    ta := TouchArea {}
+    callback clicked <=> ta.clicked;
+    in property <string> text;
+    in-out property <bool> has_hover: ta.has-hover;
+    in property <bool> enabled;
+
+    Text { text: text; }
+
+    ta := TouchArea {
+        enabled: enabled;
+    }
+
 }

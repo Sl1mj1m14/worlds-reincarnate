@@ -132,7 +132,12 @@ fn main () -> Result<(),Box<dyn Error>>{
             });}
 
             let mut js_format_list: Vec<SharedString> = Vec::new();
-            for format in file::JS_FORMATS { js_format_list.push((*format).into())}
+
+            //Temporary solution until chrome and edge support is added!
+            //for format in file::JS_FORMATS { js_format_list.push((*format).into())}
+            js_format_list.push("Raw (Json)".into());
+            js_format_list.push("Firefox".into());
+
             let mut js_url_list: Vec<SharedString> = Vec::new();
             for url in file::JS_URLS { js_url_list.push((*url).into())}
 
@@ -171,6 +176,8 @@ fn main () -> Result<(),Box<dyn Error>>{
 
             if (code == 0 && clone_input.borrow_mut().edition == id) || (code == 1 && clone_output.borrow_mut().edition == id) || code > 1 {return}
             
+            ui.global::<Versions>().set_convert_state(false);
+            
             let mut version_list: Vec<Version> = Vec::new();
             for version in (*clone_editions).clone()[i].versions.clone() { version_list.push(Version { 
                 display: version.display.into(), 
@@ -183,6 +190,7 @@ fn main () -> Result<(),Box<dyn Error>>{
                     clone_input.replace(Handler::default());
                     clone_input.borrow_mut().edition = (*clone_editions)[i].id.clone();
 
+                    ui.global::<Versions>().set_browse_state(false);
                     ui.global::<Versions>().set_input_version_list(Rc::new(slint::VecModel::from(version_list.clone())).into());
 
                     //Handling arguments
@@ -217,7 +225,7 @@ fn main () -> Result<(),Box<dyn Error>>{
 
         ui.global::<Versions>().on_set_version(move |code, e_index, version| {
             log::log(-1, "Attempting to change version");
-            let _ui = ui_weak.unwrap(); //Will be used in the future with certain states
+            let ui = ui_weak.unwrap();
             let clone_editions = clone_editions.lock().unwrap();
 
             let i = ((e_index.abs() + e_index)/2) as usize; //Index can return -1, this just changes it to 0
@@ -227,6 +235,7 @@ fn main () -> Result<(),Box<dyn Error>>{
                 0 => {
                     clone_input.borrow_mut().version = version;
                     clone_input.borrow_mut().edition = edition;
+                    ui.global::<Versions>().set_browse_state(true);
                 },
                 1 => {
                     clone_output.borrow_mut().version = version;
@@ -234,6 +243,16 @@ fn main () -> Result<(),Box<dyn Error>>{
                 },
                 _ => return
             }
+
+            if  clone_input.borrow_mut().edition.clone() != String::default() &&
+                clone_output.borrow_mut().edition.clone() != String::default() &&
+                clone_input.borrow_mut().version != i32::default() &&
+                clone_output.borrow_mut().version != i32::default() &&
+                clone_input.borrow_mut().path.clone() != PathBuf::default() {
+                    ui.global::<Versions>().set_convert_state(true);
+                }
+
+
         });
 
         //Handling updating args
