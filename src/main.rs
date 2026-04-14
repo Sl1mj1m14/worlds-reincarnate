@@ -19,9 +19,9 @@ use crate::{file::*, version::Edition};
 
 slint::include_modules!();
 
-const VERSION: &str = "a0.1.0-dev";
+const VERSION: &str = "a0.1.0";
 
-const DEBUG_FLAG: bool = true;
+const DEBUG_FLAG: bool = false;
 const LOCAL_FLAG: bool = false;
 
 static DEBUG: OnceLock<Debug> = OnceLock::new();

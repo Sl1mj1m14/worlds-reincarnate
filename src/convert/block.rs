@@ -252,7 +252,7 @@ fn record_to_block (indices: Vec<usize>, record: StringRecord, btype: Value, ver
             _ => continue
         };
 
-        let raw = record.get(i+3).unwrap();
+        let raw = record.get(i+3).unwrap_or_default();
         let data: Option<_> = match raw {
             "" => None,
             _ => None //Handle parsing blockdata in the future
