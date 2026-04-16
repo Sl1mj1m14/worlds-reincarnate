@@ -135,6 +135,10 @@ pub fn filter_files (edition: String, version: i32, args: Option<Vec<Argument>>)
                 _ => dialog
             }
         },
+        version::FOURK_EDITION => {
+            is_file = true;
+            dialog.add_filter("4k", &["4k"])
+        }
         _ => {
             log(1,"Searching for unknown or unsupported edition!");
             dialog

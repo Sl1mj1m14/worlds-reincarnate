@@ -1,8 +1,9 @@
 use std::{cell::RefCell, fs, path::PathBuf, sync::Once};
 
+use javarandom::JavaRandom;
 use v8::Local;
 
-use crate::{log::log, resources::{self, Generator, Resource, check_hash, download}, world::{Block, Value}};
+use crate::{log::log, resources::{self, Generator, Resource, check_hash, download}, version::{FOURK_1, FOURK_2, FOURK_EDITION, FOURK_JS}, world::{Block, Value}};
 
 static V8_INIT: Once = Once::new();
 
@@ -10,8 +11,13 @@ thread_local! {
     static ISOLATE: RefCell<v8::OwnedIsolate> = RefCell::new(v8::Isolate::new(Default::default()));
 }
 
-pub fn air (_edition: String, _version: i32, dims: [i32; 3]) -> Vec<Block> {
-    let block = Block {id: Value::UByte(0), block_data: None};
+pub fn air (edition: String, version: i32, dims: [i32; 3]) -> Vec<Block> {
+    let mut block = Block {id: Value::UByte(0), block_data: None};
+
+    if edition == FOURK_EDITION && version >= FOURK_JS {
+        block = Block {id: Value::UInt(0), block_data: None};
+    }
+
     let size = (dims[0]*dims[1]*dims[2]) as usize;
     vec![block; size]
 }
@@ -104,4 +110,115 @@ pub fn javascript (seed: i64, world_size: i32) -> Vec<u8> {
     log(-1,format!("Passing over {} tiles",tiles.len()));
     tiles
 
+}
+
+pub fn fourk (version: i32, seed: i64, dims: [i32; 3]) -> Option<Vec<Block>> {
+    let volume = dims[0] * dims[1] * dims[2];
+    let mut arr: Vec<i32> = Vec::with_capacity(volume as usize);
+
+    match version {
+        FOURK_1 => { //See original code here: https://discordapp.com/channels/761001494514237490/1483140248778178651/1491505203688636627
+            let mut rand = JavaRandom::new();
+            rand.set_seed(seed);
+
+            for i in 0..volume {
+                let var: i32 = i / 64 % 64;
+                arr[i as usize] = if rand.next_int_with_bound(64) < var {1} else {0};
+                if rand.next_int_with_bound(100) == 0 {arr[i as usize] = 255}
+            }
+        },
+        FOURK_2 => { //See original code here: https://discordapp.com/channels/761001494514237490/1483140248778178651/1491505203688636627
+            let mut rand = JavaRandom::new();
+            rand.set_seed(seed);
+
+            for i in 0..volume {
+                arr[i as usize] = if i / 64 % 64 > 32 + rand.next_int_with_bound(8) {
+                    rand.next_int_with_bound(8) + 1
+                } else {
+                    0
+                };
+            }
+        },
+        FOURK_JS => { //See original code here: https://discordapp.com/channels/761001494514237490/1483140248778178651/1492520115311476756
+            V8_INIT.call_once(|| {
+                let platform = v8::new_default_platform(0, false).make_shared();
+                v8::V8::initialize_platform(platform);
+                v8::V8::initialize();
+            });
+
+            ISOLATE.with(|isolate|{
+                //Building js scope and context
+                let mut isolate = isolate.borrow_mut();
+                v8::scope!(let handle_scope, &mut *isolate);
+                let context = v8::Context::new(handle_scope, Default::default());
+                let scope = &v8::ContextScope::new(handle_scope, context);
+
+                let raw: String = r#"
+                function getWorld (xDim, yDim, zDim) {
+                    var map = new Array(xDim * yDim * zDim);
+                    for ( var x = 0; x < xDim; x++) {
+                        for ( var y = 0; y < yDim; y++) {
+                            for ( var z = 0; z < zDim; z++) {
+                                var i = (z * yDim * xDim) + (y * xDim) + x;
+                                var yd = (y - 32.5) * 0.4;
+                                var zd = (z - 32.5) * 0.4;
+                                map[i] = (Math.random() * 16) | 0;
+                                if (Math.random() > Math.sqrt(Math.sqrt(yd * yd + zd * zd)) - 0.8)
+                                    map[i] = 0;
+                            }
+                        }
+                    }
+                    return map
+                }
+                "#.to_string();
+
+                //Building script
+                let source = v8::String::new(scope, &raw).unwrap();
+                let script = v8::Script::compile(scope, source, None).unwrap();
+                script.run(scope).unwrap();
+
+                //Retreiving function
+                let global = context.global(scope);
+                let function_name = v8::String::new(scope, "getWorld").unwrap();
+                let function_obj = global.get(scope, function_name.into()).unwrap();
+                let function = v8::Local::<v8::Function>::try_from(function_obj).unwrap();
+
+                //Setting arguments
+                let arg1 = v8::Integer::new(scope, dims[0]);
+                let arg2 = v8::Integer::new(scope, dims[1]);
+                let arg3 = v8::Integer::new(scope, dims[2]);
+                let args: &[Local<v8::Value>; 3] = &[arg1.into(), arg2.into(), arg3.into()];
+
+                //Calling and running javascript function
+                let result = function.call(scope, v8::undefined(scope).into(), args).unwrap();
+                let js_arr = match v8::Local::<v8::Array>::try_from(result) {
+                    Ok(t) => t,
+                    Err(_) => return
+                };
+
+                for i in 0..js_arr.length() {
+                    let val = js_arr.get_index(scope, i).unwrap();
+                    arr[i as usize] = val.to_int32(scope).unwrap().value();
+                }
+
+            });
+        },
+        _ => {
+            log(1, format!("Invalid 4k version passed to generator: {version}"));
+            return None
+        }
+    }
+
+    let mut blocks: Vec<Block> = Vec::new();
+
+    for int in arr {
+        let block: Block = if version >= FOURK_JS {
+            Block {id: Value::UInt(int as u32), block_data: None}
+        } else {
+            Block {id: Value::UByte(int as u8), block_data: None}
+        };
+        blocks.push(block);
+    }
+
+    Some(blocks)
 }

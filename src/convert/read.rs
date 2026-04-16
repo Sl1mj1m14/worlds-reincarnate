@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 
 use rusqlite::Connection;
 use serde_json::Value as JValue;
 use snap::raw::Decoder;
 
-use crate::{Handler, convert::generate, file::{Argument, JSFormat, JSUrl}, functions::*, log::log, version::*, world::*};
+use crate::{Handler, convert::generate, file::{Argument, JSFormat, JSUrl}, functions::*, log::log, version::{self, *}, world::*};
 
 pub fn read (handler: Handler) -> Option<World> {
     let edition = handler.edition.clone();
@@ -24,6 +24,9 @@ pub fn read (handler: Handler) -> Option<World> {
         },
         JAVASCRIPT_EDITION => {
             read_javascript(path, handler.args)
+        },
+        FOURK_EDITION => {
+            read_fourk(path, version)
         },
         _ => {
                 log(2, "Unrecognized or unsupported edition!");
@@ -376,6 +379,60 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
     world.edition = JAVASCRIPT_EDITION.to_string();
     world.version = JS_E620;
     log(0,"Assuming latest classic javascript version");
+
+    Some(world)
+}
+
+fn read_fourk(path: PathBuf, version: i32) -> Option<World> {
+    let max_volume = 64*64*64;
+    let mut block_array: BlockArray = BlockArray::default();
+    block_array.format = ["+z".to_string(),"-y".to_string(),"+x".to_string()];
+    block_array.dims = [64,64,64]; //Must be in xyz
+
+    let bytes = if version < FOURK_JS {
+        match path2stream(path) {
+            Some(val) => val,
+            None => {
+                log(2,format!("Unable to open file"));
+                return None
+            }
+        } 
+    } else {
+        let v = match fs::read(path) {
+            Ok(val) => val,
+            Err(e) => {
+                log(2,format!("{e}"));
+                return None
+            }
+        };
+        let mut w: Vec<u8> = Vec::new();
+        let mut i: usize = 0;
+        while i < v.len() {
+            w.push(v[i]);
+            i += 4;
+        }
+        v
+    };
+    
+    if bytes.len() > max_volume {
+        log(1,format!("Assuming this is a 4k world, found {} erroneous bytes",(bytes.len()-max_volume)));
+        log(1, "Losing these bytes");
+    }
+
+    for i in 0..bytes.len().min(max_volume) {
+        let block = if version < FOURK_JS {
+            Block { id: Value::UByte(bytes[i]), block_data: None }
+        } else {
+            Block { id: Value::UInt(bytes[i] as u32), block_data: None }
+        };
+
+        block_array.blocks.push(block);
+    }
+
+    let mut world = World::default();
+    world.edition = FOURK_EDITION.to_string();
+    world.version = version;
+    world.blocks = Some(block_array);
 
     Some(world)
 }

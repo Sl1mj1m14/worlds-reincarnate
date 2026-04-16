@@ -6,6 +6,7 @@ use crate::{log::log, resources::{self, Resource}};
 
 pub const JAVA_EDITION: &str = "java";
 pub const JAVASCRIPT_EDITION: &str = "classicjs";
+pub const FOURK_EDITION: &str = "fourk";
 
 pub const J_PC16: i32 = 40; //pc-161148
 pub const J_C12: i32 = 10110; //c0.0.12a_03
@@ -16,6 +17,10 @@ pub const J_C29: i32 = 10780; //c0.29_02
 pub const J_C30: i32 = 10810; //c0.30c-launcher
 
 pub const JS_E620: i32 = 700; //cjs-e6201baab01dbc98b4ad
+
+pub const FOURK_1: i32 = 10; //4k-0217 (Modded)
+pub const FOURK_2: i32 = 20; //4k-0144 (Modded)
+pub const FOURK_JS: i32 = 1000; //4k-js (Modded)
 
 #[derive(Clone)]
 pub struct Samvid {
@@ -115,6 +120,7 @@ fn is_valid (edition: String, version:Option<i32>) -> bool {
             } else {true}
         },
         JAVASCRIPT_EDITION => true,
+        FOURK_EDITION => true,
         _ => false
     }
 }
