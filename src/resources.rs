@@ -11,6 +11,7 @@ const SHEET_ID: &str = "1_B371N-C69SWg5LEHa5YXKv9X6IL-EBagwsQxZ9NCTo";
 const SAMVID_GID: &str = "1519184165";
 
 const BLOCK_GID: &str = "75311798";
+const BLOCK_SPECIAL_GID: &str = "516684395";
 const WORLD_DATA_GID: &str = "2102518304";
 
 pub static HASHES: OnceLock<HashMap<Resource, Info>> = OnceLock::new();
@@ -27,6 +28,7 @@ pub enum Resource {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Map {
     Block,
+    BlockSpecial,
     WorldData
 }
 
@@ -113,6 +115,13 @@ pub fn initialize () {
     });
 
     hashes.insert(
+        Resource::Map(Map::BlockSpecial), Info {
+             hash: map.get("MAP-BLOCK-SPECIAL").unwrap_or(&String::default()).clone(),
+             url: format!("{base_url}&gid={BLOCK_SPECIAL_GID}"), 
+             path: [PROJECT_DIR.get().unwrap().clone(),"resources".into(),"maps".into(),"special".into(),"block_ids.csv".into()].iter().collect()
+    });
+
+    hashes.insert(
         Resource::Map(Map::WorldData), Info {
              hash: map.get("MAP-WORLDDATA").unwrap_or(&String::default()).clone(),
              url: format!("{base_url}&gid={WORLD_DATA_GID}"), 
@@ -136,6 +145,11 @@ pub fn initialize () {
     if !check_hash(Resource::Map(Map::Block)) {
         log(0, "Downloading Block ID List...");
         let _ = download(Resource::Map(Map::Block));
+    }
+
+    if !check_hash(Resource::Map(Map::BlockSpecial)) {
+        log(0, "Downloading Special Block ID List...");
+        let _ = download(Resource::Map(Map::BlockSpecial));
     }
 
     if !check_hash(Resource::Map(Map::WorldData)) {

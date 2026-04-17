@@ -6,7 +6,7 @@ use crate::{log::log, resources::{self, Map, Resource}, version::{FOURK_EDITION,
 
 pub fn create_map(input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Block, Block>> {
     
-    let path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Map(Map::Block)].path.clone();
+    let mut path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Map(Map::Block)].path.clone();
 
     if !path.exists() {
         log(2, "Block map not found, unable to convert world!");
@@ -69,6 +69,40 @@ pub fn create_map(input_edition: String, input_version: i32, output_edition: Str
     for (key, value) in map.clone() {
         log(-1, format!("Key: {:?}", key));
         log(-1, format!("Value: {:?}", value));
+    }
+
+    //Overriding entries with special cases
+    path = resources::HASHES.get().unwrap()[&Resource::Map(Map::BlockSpecial)].path.clone();
+
+    if !path.exists() {
+        log(1, "Special block map not found, potential for incomplete block conversion");
+        return Some(map)
+    }
+
+    reader = match csv::ReaderBuilder::new().has_headers(false).from_path(path) {
+        Ok(r) => r,
+        Err(e) => {
+            log(1, "Failed to parse special block map, potential for incomplete block conversion");
+            log(1, format!("{e}"));
+            return Some(map)
+        }
+    };
+
+    for (index, result) in reader.records().enumerate() {
+        let line = match result {
+            Ok(r) => r,
+            Err(_) => {
+                log(1, "Invalid record when building block map - skipping");
+                continue
+            }
+        };
+
+        let edition: &str = record.get(0).unwrap();
+        let lower: i32 = record.get(1).unwrap().parse().unwrap_or(input_version + 1);
+        let upper: i32 = record.get(2).unwrap().parse().unwrap_or(0);
+
+        if input_edition != edition || input_version < lower || input_version > upper {continue}
+        
     }
 
     Some(map)
