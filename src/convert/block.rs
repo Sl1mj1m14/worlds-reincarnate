@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use csv::StringRecord;
 
-use crate::{log::log, resources::{self, Resource, Map}, version::{JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value}};
+use crate::{log::log, resources::{self, Map, Resource}, version::{FOURK_EDITION, FOURK_JS, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value}};
 
 pub fn create_map(input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Block, Block>> {
     
@@ -222,12 +222,20 @@ fn format_to_mults (input: [String; 3], dims: [i32; 3]) -> Vec<i32> {
     vec![x_base,x_mult,y_base,y_mult,z_base,z_mult]
 }
 
-fn get_block_type (edition: String, _version: i32) -> Value {
+fn get_block_type (edition: String, version: i32) -> Value {
     match edition.as_str() {
         JAVA_EDITION => Value::UByte(0),
         JAVASCRIPT_EDITION => Value::UByte(0),
+        FOURK_EDITION => {
+            if version < FOURK_JS {
+                Value::UInt(0)
+            } else {
+                Value::UByte(0)
+            }
+        },
         _ => {
             log(2, "Unsupported edition detected!");
+            log(2, "Assuming default block value??");
             Value::UByte(0)
         }
     }
@@ -248,6 +256,13 @@ fn record_to_block (indices: Vec<usize>, record: StringRecord, btype: Value, ver
                     Err(_) => continue
                 };
                 Value::UByte(val)
+            },
+            Value::UInt(_) => {
+                let val: u32 = match raw.parse() {
+                    Ok(v) => v,
+                    Err(_) => continue
+                };
+                Value::UInt(val)
             },
             _ => continue
         };

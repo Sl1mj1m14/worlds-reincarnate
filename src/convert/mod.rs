@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Handler, convert::worlddata::Data, log::log, version::{J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value, World}};
+use crate::{Handler, convert::worlddata::Data, log::log, version::{FOURK_2, FOURK_EDITION, FOURK_JS, J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value, World}};
 
 mod read;
 mod write;
@@ -27,7 +27,6 @@ pub fn convert(input: Handler, output: Handler) {
 
     log(0,"Converting world...");
 
-    //Implement converting you fool...
     let world_data = match worlddata::create_map(world.clone().edition, world.clone().version, output.edition.clone(), output.version) {
         Some(m) => m,
         None => {
@@ -143,6 +142,19 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
             dims = [x,64,x];
             default = Block { id: Value::UByte(0), block_data: None };
         },
+        FOURK_EDITION => {
+            format = ["+z".to_string(),"-y".to_string(),"+x".to_string()];
+            dims = [dims[0].min(64), dims[1].min(64), dims[2].min(64)]; //This will be a toggle in the future whether to let the world dimensions get screwed up by a world too small or generate the new blocks here. It's a quirk of the saving mod
+            if output_version < FOURK_JS {
+                if output_version < FOURK_2 {
+                    default = Block { id: Value::UInt(1), block_data: None } //Converts everything to x_or instead of air, as current default. Otherwise the world would have no blocks...
+                } else {
+                    default = Block { id: Value::UInt(0), block_data: None }
+                }
+            } else {
+                default = Block { id: Value::UByte(0), block_data: None }
+            }
+        }
         _ => {
             log(2, "Unrecognized or unsupported edition!");
             return None
@@ -177,7 +189,7 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     if max != new_array.dims {
         log(0, "Growing world");
         //Eventually set the seed outside using the default for the OUTPUT edition
-        let mut generated: Vec<Block> = Vec::new();
+        let generated: Vec<Block>;
         match output_edition.as_str() {
             JAVA_EDITION => {
                 //Add support for generators in the future
@@ -212,6 +224,22 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
                 }
 
                 generated = generated1
+            },
+            FOURK_EDITION => {
+                let mut seed: i64 = 18295169; //This is the hardcoded seed in 4k generation
+                if world.world_data.is_some() {
+                    let data = world.world_data.unwrap().clone();
+                    if data.get("seed").is_some() {
+                        seed = data.get("seed").unwrap().as_i64().unwrap();
+                    }
+                }
+                generated = match generate::fourk(output_version, seed, max.clone()) {
+                    Some(g) => g,
+                    None => {
+                        log(2, "Generating missing 4k blocks failed!");
+                        return None
+                    }
+                };
             },
             _ => {
                 log(2, "Unrecognized or unsupported edition!");

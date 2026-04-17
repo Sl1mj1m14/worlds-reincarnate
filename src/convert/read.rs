@@ -384,46 +384,65 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
 }
 
 fn read_fourk(path: PathBuf, version: i32) -> Option<World> {
+    let seed: i64 = 18295169; //This is the hardcoded seed in 4k generation
     let max_volume = 64*64*64;
     let mut block_array: BlockArray = BlockArray::default();
     block_array.format = ["+z".to_string(),"-y".to_string(),"+x".to_string()];
-    block_array.dims = [64,64,64]; //Must be in xyz
+    block_array.dims = [64; 3]; //Must be in xyz
 
     let bytes = if version < FOURK_JS {
-        match path2stream(path) {
+        let v = match path2stream(path) {
             Some(val) => val,
             None => {
                 log(2,format!("Unable to open file"));
                 return None
             }
-        } 
+        };
+        let mut w: Vec<u8> = Vec::new();
+        let mut i: usize = 3;
+        while i < v.len() {
+            w.push(v[i]);
+            i += 4;
+        }
+        w
     } else {
-        let v = match fs::read(path) {
+        match fs::read(path) {
             Ok(val) => val,
             Err(e) => {
                 log(2,format!("{e}"));
                 return None
             }
-        };
-        let mut w: Vec<u8> = Vec::new();
-        let mut i: usize = 0;
-        while i < v.len() {
-            w.push(v[i]);
-            i += 4;
         }
-        v
     };
+
+    log(-1, format!("Amount of bytes: {}", bytes.len()));
+    log(-1, format!("Max Volume: {}", max_volume));
     
     if bytes.len() > max_volume {
         log(1,format!("Assuming this is a 4k world, found {} erroneous bytes",(bytes.len()-max_volume)));
         log(1, "Losing these bytes");
     }
 
-    for i in 0..bytes.len().min(max_volume) {
-        let block = if version < FOURK_JS {
-            Block { id: Value::UByte(bytes[i]), block_data: None }
-        } else {
+    let mut generated: Vec<Block> = Vec::new();
+    if bytes.len() < max_volume {
+        log(1,format!("Assuming this is a 4k world, missing {} bytes",(max_volume-bytes.len())));
+        log(1, "Generating missing blocks...");
+        generated = match generate::fourk(version, seed, block_array.dims.clone()) {
+            Some(g) => g,
+            None => {
+                log(2, "Generating missing 4k blocks failed!");
+                return None
+            }
+        }
+    }
+
+    for i in 0..max_volume {
+        let block = if i >= bytes.len() {
+            generated[i].clone()
+        } else if version < FOURK_JS {
             Block { id: Value::UInt(bytes[i] as u32), block_data: None }
+        } else {
+            Block { id: Value::UByte(bytes[i]), block_data: None }
         };
 
         block_array.blocks.push(block);
@@ -432,7 +451,15 @@ fn read_fourk(path: PathBuf, version: i32) -> Option<World> {
     let mut world = World::default();
     world.edition = FOURK_EDITION.to_string();
     world.version = version;
-    world.blocks = Some(block_array);
+    world.blocks = Some(block_array.clone());
+
+    if version < FOURK_JS {
+        let mut world_data: HashMap<String,Value> = HashMap::new();
+        world_data.insert("seed".to_string(), Value::Long(seed));
+        world.world_data = Some(world_data);
+    }
+
+    //log(-1, format!("{:?}",block_array));
 
     Some(world)
 }

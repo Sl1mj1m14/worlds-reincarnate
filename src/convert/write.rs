@@ -7,7 +7,7 @@ use serde_json::{Map, Value as JValue, json, to_writer_pretty};
 use flate2::{Compression, write::GzEncoder};
 use snap::raw::Encoder;
 
-use crate::{convert::generate, file::{Argument, JSFormat, JSUrl}, log::log, version::{J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Value, World}};
+use crate::{convert::generate, file::{Argument, JSFormat, JSUrl}, log::log, version::{FOURK_EDITION, FOURK_JS, J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Value, World}};
 
 pub fn write (world: World, path: PathBuf, args: Option<Vec<Argument>>) -> i32 {
     if !path.exists() {
@@ -34,6 +34,7 @@ pub fn write (world: World, path: PathBuf, args: Option<Vec<Argument>>) -> i32 {
             }
         },
         JAVASCRIPT_EDITION => write_javascript(world, path.clone(), args),
+        FOURK_EDITION => write_fourk(world, path.clone()),
         _ => {
                 log(2, "Unrecognized or unsupported edition!");
                 0
@@ -91,7 +92,7 @@ fn write_preclassic(world: World, dir: PathBuf) -> i32 {
     match encoder.write_all(&bytes) {
         Ok(_) => (),
         Err(e) => {
-            log(2,"Failed to write file!");
+            log(2,"Failed to encode file!");
             log(2,format!("{e}"));
             return 0
         }
@@ -538,6 +539,84 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
             return 0
         }
     }
+
+    return 1
+}
+
+fn write_fourk (world: World, dir: PathBuf) -> i32 {
+    let mut path: PathBuf = dir;
+    path.push("level");
+    path.set_extension("4k");
+
+    if path.exists() {
+        log(1,"File already exists in output location!");
+        log(1,format!("Replacing file at {}",path.clone().to_str().unwrap_or_default()));
+        match remove_file(path.clone()) {
+            Ok(_) => (),
+            Err(e) => {
+                log(2,format!("Unable to replace file at {}!",path.clone().to_str().unwrap_or_default()));
+                log(2,format!("{e}"));
+                return 0
+            }
+        }
+    }
+
+    let mut bytes: Vec<u8> = Vec::new();
+    match world.blocks {
+        Some(blocks) => {
+            for block in blocks.blocks {
+                if world.version < FOURK_JS {
+                    if matches!(block.id, Value::UInt(_)) {
+                        bytes.extend_from_slice(&block.id.as_u32().unwrap().to_be_bytes());
+                    } else {
+                        log(1,format!("Invalid block value found! - Replacing with air"));
+                        bytes.extend_from_slice(&[0; 4]);
+                    }
+                } else {
+                    if matches!(block.id, Value::UByte(_)) {
+                        bytes.push(block.id.as_u8().unwrap());
+                    } else {
+                        log(1,format!("Invalid block value found! - Replacing with air"));
+                        bytes.push(0)
+                    }
+                }
+            }
+        }
+        None => {
+            log(2,"No blocks within the world, unable to write");
+            return 0
+        }
+    }
+
+    let mut output: File = match OpenOptions::new().write(true).create(true).open(path) {
+        Ok(f) => f,
+        Err(e) => {
+            log(2,"Failed to write file!");
+            log(2,format!("{e}"));
+            return 0
+        }
+    };
+
+    if world.version < FOURK_JS {
+        let mut encoder = GzEncoder::new(output, Compression::default());
+        match encoder.write_all(&bytes) {
+            Ok(_) => (),
+            Err(e) => {
+                log(2,"Failed to encode file!");
+                log(2,format!("{e}"));
+                return 0
+            }
+        }
+    } else {
+        match output.write_all(&bytes) {
+            Ok(_) => (),
+            Err(e) => {
+                log(2,"Failed to write to file!");
+                log(2,format!("{e}"));
+                return 0
+            }
+        }
+    } 
 
     return 1
 }

@@ -14,7 +14,7 @@ thread_local! {
 pub fn air (edition: String, version: i32, dims: [i32; 3]) -> Vec<Block> {
     let mut block = Block {id: Value::UByte(0), block_data: None};
 
-    if edition == FOURK_EDITION && version >= FOURK_JS {
+    if edition == FOURK_EDITION && version < FOURK_JS {
         block = Block {id: Value::UInt(0), block_data: None};
     }
 
@@ -121,22 +121,27 @@ pub fn fourk (version: i32, seed: i64, dims: [i32; 3]) -> Option<Vec<Block>> {
             let mut rand = JavaRandom::new();
             rand.set_seed(seed);
 
-            for i in 0..volume {
-                let var: i32 = i / 64 % 64;
-                arr[i as usize] = if rand.next_int_with_bound(64) < var {1} else {0};
-                if rand.next_int_with_bound(100) == 0 {arr[i as usize] = 255}
+            for x in 0..dims[0] {
+                for y in 0..dims[1] {
+                    for z in 0..dims[2] {
+                        let i = ((z * dims[1] * dims[0]) + (y * dims[0]) + x) as usize;
+                        arr[i] = if rand.next_int_with_bound(64) < y {1} else {0};
+                        if rand.next_int_with_bound(100) == 0 {arr[i as usize] = 255}
+                    }
+                }
             }
         },
         FOURK_2 => { //See original code here: https://discordapp.com/channels/761001494514237490/1483140248778178651/1491505203688636627
             let mut rand = JavaRandom::new();
             rand.set_seed(seed);
 
-            for i in 0..volume {
-                arr[i as usize] = if i / 64 % 64 > 32 + rand.next_int_with_bound(8) {
-                    rand.next_int_with_bound(8) + 1
-                } else {
-                    0
-                };
+            for x in 0..dims[0] {
+                for y in 0..dims[1] {
+                    for z in 0..dims[2] {
+                        let i = ((z * dims[1] * dims[0]) + (y * dims[0]) + x) as usize;
+                        arr[i] = if y > 32 + rand.next_int_with_bound(8) {rand.next_int_with_bound(8) + 1} else {0}
+                    }
+                }
             }
         },
         FOURK_JS => { //See original code here: https://discordapp.com/channels/761001494514237490/1483140248778178651/1492520115311476756
@@ -213,9 +218,9 @@ pub fn fourk (version: i32, seed: i64, dims: [i32; 3]) -> Option<Vec<Block>> {
 
     for int in arr {
         let block: Block = if version >= FOURK_JS {
-            Block {id: Value::UInt(int as u32), block_data: None}
-        } else {
             Block {id: Value::UByte(int as u8), block_data: None}
+        } else {
+            Block {id: Value::UInt(int as u32), block_data: None}
         };
         blocks.push(block);
     }
