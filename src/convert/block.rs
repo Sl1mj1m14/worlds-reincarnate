@@ -88,7 +88,7 @@ pub fn create_map(input_edition: String, input_version: i32, output_edition: Str
         }
     };
 
-    for (index, result) in reader.records().enumerate() {
+    for (_, result) in reader.records().enumerate() {
         let line = match result {
             Ok(r) => r,
             Err(_) => {
@@ -97,12 +97,51 @@ pub fn create_map(input_edition: String, input_version: i32, output_edition: Str
             }
         };
 
-        let edition: &str = record.get(0).unwrap();
-        let lower: i32 = record.get(1).unwrap().parse().unwrap_or(input_version + 1);
-        let upper: i32 = record.get(2).unwrap().parse().unwrap_or(0);
+        let edition: &str = line.get(0).unwrap();
+        let lower: i32 = line.get(1).unwrap().parse().unwrap_or(input_version + 1);
+        let upper: i32 = line.get(2).unwrap().parse().unwrap_or(0);
 
         if input_edition != edition || input_version < lower || input_version > upper {continue}
-        
+
+        let raw_1: &str = line.get(3).unwrap_or_default();
+        let raw_2: &str = line.get(4).unwrap_or_default();
+
+        let key = match raw_to_block([raw_1, raw_2], input_type.clone()) {
+            Some(b) => b,
+            None => continue,
+        };
+
+        let mut i: usize = 5;
+        loop {
+            let edition = match line.get(i) {
+                Some(s) => {
+                    log(-1, format!("edition is: {s}"));
+                    s
+                },
+                None => break
+            };
+            let lower: i32 = line.get(i+1).unwrap().parse().unwrap_or(output_version + 1);
+            let upper: i32 = line.get(i+2).unwrap().parse().unwrap_or(0);
+
+            if output_edition != edition || output_version < lower || output_version > upper {
+                i += 5;
+                continue
+            }
+
+            let raw_1: &str = line.get(i+3).unwrap_or_default();
+            let raw_2: &str = line.get(i+4).unwrap_or_default();
+
+            match raw_to_block([raw_1, raw_2], output_type.clone()) {
+                Some(b) => {
+                    map.insert(key, b);
+                    break
+                },
+                None => {
+                    i += 5;
+                    continue
+                }
+            }
+        }
     }
 
     Some(map)
@@ -282,33 +321,39 @@ fn record_to_block (indices: Vec<usize>, record: StringRecord, btype: Value, ver
 
         if version < lower || version > upper { continue }
 
-        let raw: &str = record.get(i+2).unwrap();
-        let id = match btype {
-            Value::UByte(_) => {
-                let val: u8 = match raw.parse() {
-                    Ok(v) => v,
-                    Err(_) => continue
-                };
-                Value::UByte(val)
-            },
-            Value::UInt(_) => {
-                let val: u32 = match raw.parse() {
-                    Ok(v) => v,
-                    Err(_) => continue
-                };
-                Value::UInt(val)
-            },
-            _ => continue
-        };
-
-        let raw = record.get(i+3).unwrap_or_default();
-        let data: Option<_> = match raw {
-            "" => None,
-            _ => None //Handle parsing blockdata in the future
-        };
-
-        return Some(Block { id: id, block_data: data });
+        let raw = [record.get(i+2).unwrap_or_default(), record.get(i+3).unwrap_or_default()];
+        match raw_to_block(raw, btype.clone()) {
+            Some(b) => return Some(b),
+            None => continue
+        }
 
     }
     return None
+}
+
+fn raw_to_block (raw: [&str; 2], btype: Value) -> Option<Block> {
+    let id = match btype {
+        Value::UByte(_) => {
+            let val: u8 = match raw[0].parse() {
+                Ok(v) => v,
+                Err(_) => return None
+            };
+            Value::UByte(val)
+        },
+        Value::UInt(_) => {
+            let val: u32 = match raw[0].parse() {
+                Ok(v) => v,
+                Err(_) => return None
+            };
+            Value::UInt(val)
+        },
+        _ => return None
+    };
+
+    let data: Option<_> = match raw[1] {
+        "" => None,
+        _ => None //Handle parsing blockdata in the future
+    };
+
+    return Some(Block { id: id, block_data: data });
 }

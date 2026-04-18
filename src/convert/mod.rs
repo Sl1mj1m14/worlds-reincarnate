@@ -146,11 +146,7 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
             format = ["+z".to_string(),"-y".to_string(),"+x".to_string()];
             dims = [dims[0].min(64), dims[1].min(64), dims[2].min(64)]; //This will be a toggle in the future whether to let the world dimensions get screwed up by a world too small or generate the new blocks here. It's a quirk of the saving mod
             if output_version < FOURK_JS {
-                if output_version < FOURK_2 {
-                    default = Block { id: Value::UInt(1), block_data: None } //Converts everything to x_or instead of air, as current default. Otherwise the world would have no blocks...
-                } else {
-                    default = Block { id: Value::UInt(0), block_data: None }
-                }
+                default = Block { id: Value::UInt(0), block_data: None }
             } else {
                 default = Block { id: Value::UByte(0), block_data: None }
             }

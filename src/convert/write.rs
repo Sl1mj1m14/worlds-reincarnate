@@ -545,8 +545,16 @@ fn write_javascript (world: World, dir: PathBuf, args: Option<Vec<Argument>>) ->
 
 fn write_fourk (world: World, dir: PathBuf) -> i32 {
     let mut path: PathBuf = dir;
-    path.push("level");
-    path.set_extension("4k");
+    
+
+    if world.version < FOURK_JS {
+        path.push("level");
+        path.set_extension("4k");
+    } else {
+        path.push("4k_level");
+        path.set_extension("dat"); 
+    }
+    
 
     if path.exists() {
         log(1,"File already exists in output location!");

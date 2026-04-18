@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use enum_iterator::Sequence;
 
-use crate::{log::log, version};
+use crate::{log::log, version::{self, FOURK_JS}};
 
 pub static JS_FORMATS: &[&str] = &[
     "Raw (Json)",
@@ -137,7 +137,12 @@ pub fn filter_files (edition: String, version: i32, args: Option<Vec<Argument>>)
         },
         version::FOURK_EDITION => {
             is_file = true;
-            dialog.add_filter("4k", &["4k"])
+            if version < version::FOURK_JS {
+                dialog.add_filter("4k", &["4k"])
+            } else {
+                dialog.add_filter("4k", &["dat"])
+            }
+            
         }
         _ => {
             log(1,"Searching for unknown or unsupported edition!");
