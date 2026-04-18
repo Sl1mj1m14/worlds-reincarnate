@@ -21,6 +21,7 @@ hex = "0.4.3"
 
 #file handling
 reqwest = {version = "0.13.2", features = ["blocking"]}
+sha1-checked = "0.10.0"
 sha2 = "0.11.0"
 rfd = "0.17.2"
 directories = "6.0.0"
