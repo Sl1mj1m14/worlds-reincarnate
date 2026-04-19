@@ -6,7 +6,7 @@ use serde_json::Value;
 use sha1_checked::{Digest, Sha1};
 use sha2::{Digest as Digest256, Sha256};
 
-use crate::{PROJECT_DIR, VERSION, log::log};
+use crate::{PROJECT_DIR, VERSION, jvm, log::log};
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 const MOJANG_MANIFEST_KEY: &str = "windows-x64";
@@ -70,7 +70,7 @@ pub enum Generator {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Manifest {
     Mojang,
-    Java(u8)
+    Java(jvm::Version)
 }
 
 #[derive(Clone, Debug)]
@@ -151,7 +151,12 @@ pub fn initialize () {
                 }
             };
 
-            path = [PROJECT_DIR.get().unwrap().clone(),"resources".into(),"mojang_java_manifest.json".into()].iter().collect();
+            path = [PROJECT_DIR.get().unwrap().clone(),"resources".into()].iter().collect();
+            if !path.exists() { let _ = create_dir_all(path.clone()); }
+
+            path.push("mojang_java_manifest");
+            path.set_extension("json");
+
             if path.exists() {
                 log(0,"Updating mojang manifest");
                 let _ = remove_file(path.clone());
@@ -217,9 +222,9 @@ pub fn initialize () {
         let manifest = manifest.get(MOJANG_MANIFEST_KEY).unwrap().clone();
 
         hashes.insert(
-        Resource::Manifest(Manifest::Java(8)), Info {
-                hash: Hash::SHA1(manifest["jre-legacy"][0]["manifest"]["sha1"].to_string()),
-                url: manifest["jre-legacy"][0]["manifest"]["url"].to_string(), 
+        Resource::Manifest(Manifest::Java(jvm::Version::V8)), Info {
+                hash: Hash::SHA1(manifest["jre-legacy"][0]["manifest"]["sha1"].as_str().unwrap().to_string()),
+                url: manifest["jre-legacy"][0]["manifest"]["url"].as_str().unwrap().to_string(), 
                 path: [PROJECT_DIR.get().unwrap().clone(),"resources".into(),"manifests".into(),"java_8_manifest.json".into()].iter().collect()
         });
     }
@@ -296,6 +301,7 @@ pub fn download (resource: Resource) -> bool {
     };
     let path = info.path.clone();
 
+    log(-1, format!("The url is : {}", info.url.clone()));
     let result = CLIENT.get().unwrap().get(info.url.clone()).send();
     match result {
         Ok(resp) => {
@@ -354,4 +360,149 @@ pub fn download (resource: Resource) -> bool {
             return false
         }
     }
+}
+
+pub fn download_from_manifest (manifest: Manifest) -> Option<PathBuf> {
+    let mut manifest_file = Value::default();
+    let mut path: PathBuf = [PROJECT_DIR.get().unwrap().clone(),"resources".into()].iter().collect();
+    let mut return_target: PathBuf;
+
+    match manifest {
+        Manifest::Java(jvm) => {
+            match jvm {
+                jvm::Version::V8 => {
+                    if !check_hash(Resource::Manifest(Manifest::Java(jvm::Version::V8))) {
+                        log(0, "Downloading Java 8 Manifest!");
+                        if !download(Resource::Manifest(Manifest::Java(jvm::Version::V8))) {
+                            log(1, "Failed to download Java 8 Manifest!");
+                            return None;
+                        }
+                    }
+
+                    let path1: PathBuf = HASHES.get().unwrap()[&Resource::Manifest(Manifest::Java(jvm::Version::V8))].path.clone();
+                    let str: String = fs::read_to_string(path1.clone()).unwrap_or_default();
+                    manifest_file = serde_json::from_str(str.as_str()).unwrap_or_default();
+
+                    path.push("java");
+                    path.push("jre_8");
+
+                    return_target = [path.clone(), "bin".into(), "server".into(), "jvm.dll".into()].iter().collect();
+                },
+            }
+        },
+        _ => {
+            log(1, "Unrecognized manifest, unable to download!");
+            return None
+        }
+    }
+
+    if manifest_file.get("files").is_none() {return None}
+
+    let objects = manifest_file.get("files").unwrap().as_object().unwrap();
+    log(0, "Ensuring java 8 dependency EXISTS...");
+    for (key, value) in objects {
+
+        let obj_path: PathBuf = [path.clone(), key.as_str().into()].iter().collect();
+        let obj_type = value["type"].as_str().unwrap();
+
+        match obj_type {
+            "file" => {
+                let details = value["downloads"]["raw"].clone();
+
+                let mut dir = obj_path.clone();
+                dir.pop();
+                if !dir.exists() {
+                    if create_dir_all(dir.clone()).is_err() {
+                        log(1, format!("Unable to create directory at {}",dir.clone().to_string_lossy()));
+                        return None
+                    }
+                }
+
+                let sha1 = details["sha1"].as_str().unwrap();
+                let url = details["url"].as_str().unwrap();
+                
+                if obj_path.exists() {
+                    if let Ok(bytes) = fs::read(obj_path.clone()) {
+                        let mut hasher = Sha1::new();
+                        hasher.update(&bytes);
+                        let hex = hex::encode(hasher.finalize());
+
+                        if hex.as_str() == sha1 {continue}
+                        else {let _ = remove_file(obj_path.clone());}
+                    }
+                }
+
+                let result = CLIENT.get().unwrap().get(url).send();
+                match result {
+                    Ok(resp) => {
+                        let status = resp.status();
+                        if status.as_u16() != 200 {
+                            log(1, format!("REQUEST {}", status.as_u16()));
+                            log(1, format!("Failed to download {key}, aborting"));
+                            return None
+                        }
+
+                        let content = match resp.bytes() {
+                            Ok(b) => b,
+                            Err(e) => {
+                                log(1, format!("{e}"));
+                                log(1, format!("Failed to parse download of {key}, aborting"));
+                                return None
+                            }
+                        };
+                        
+                        let mut file = match File::create(obj_path.clone()) {
+                            Ok(f) => f,
+                            Err(e) => {
+                                log(1,format!("Failed to create file at {}", obj_path.clone().to_string_lossy()));
+                                log(1, format!("{e}"));
+                                return None
+                            }
+                        };
+
+                        match file.write_all(&content) {
+                            Ok(_) => log(0, format!("Downloaded {} at {}", key, obj_path.clone().to_string_lossy())),
+                            Err(e) => {
+                                log(1,format!("Failed to write file at {}", obj_path.clone().to_string_lossy()));
+                                log(1, format!("{e}"));
+                                return None
+                            }
+                        }
+
+                    },
+                    Err(e) => {
+                        log(1, format!("Unable to fetch {key}"));
+                        log(1, format!("{e}"));
+                        return None
+                    }
+                }
+            },
+            "directory" => {
+                if !obj_path.exists() {
+                    if create_dir_all(obj_path.clone()).is_err() {
+                        log(1, format!("Unable to create directory at {}",obj_path.clone().to_string_lossy()));
+                        return None
+                    }
+                }
+            },
+            "link" => {
+                let target = value["target"].as_str().unwrap();
+                if !symlink(target.into(), obj_path.clone()) {return None}  
+            },
+            _ => log(1, format!("Unknown manifest type: {obj_type} - skipping"))
+        }
+    }
+
+    Some(return_target)
+}
+
+#[cfg(target_family = "unix")]
+fn symlink (target: PathBuf, link: PathBuf) -> bool {
+    return std::os::unix::fs::symlink(target, link).is_ok()
+}
+
+#[cfg(target_family = "windows")]
+fn symlink (_target: PathBuf, _link: PathBuf) -> bool {
+    log(1, format!("Unable to create symlink on non unix system! - returning"));
+    return false
 }

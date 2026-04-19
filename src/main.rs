@@ -8,6 +8,7 @@ use toml::de;
 
 mod log;
 mod resources;
+mod jvm;
 mod functions;
 mod file;
 

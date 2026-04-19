@@ -1,10 +1,11 @@
 use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 
+use jni::{errors, jni_sig, jni_str};
 use rusqlite::Connection;
 use serde_json::Value as JValue;
 use snap::raw::Decoder;
 
-use crate::{Handler, convert::generate, file::{Argument, JSFormat, JSUrl}, functions::*, log::log, version::{self, *}, world::*};
+use crate::{Handler, convert::generate, file::{Argument, JSFormat, JSUrl}, functions::*, jvm, log::log, version::{self, *}, world::*};
 
 pub fn read (handler: Handler) -> Option<World> {
     let edition = handler.edition.clone();
@@ -17,6 +18,8 @@ pub fn read (handler: Handler) -> Option<World> {
                 read_preclassic(path)
             } else if version <= J_C13_03 {
                 read_early_classic(path)
+            } else if version <= J_C30 {
+                read_classic(path)
             } else {
                 log(2, "Unrecognized or unsupported version!");
                 None
@@ -153,6 +156,29 @@ fn read_early_classic (path: PathBuf) -> Option<World> {
     log(0,"Assuming latest early classic version");
 
     Some(world)
+}
+
+fn read_classic(path: PathBuf) -> Option<World> {
+
+    let jvm = match jvm::launch(jvm::Version::V8) {
+        Some(j) => j,
+        None => {
+            log(1, "Failed to initialize jvm!");
+            return None
+        },
+    };
+
+    let _ = jvm.attach_current_thread(|env| -> errors::Result<()> {
+
+        let _ = env.call_static_method(jni_str!("ReadClassic"), jni_str!("test"), jni_sig!("()V"), &[]);
+
+        Ok(())
+    });
+
+
+
+
+    None
 }
 
 fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> {
