@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 
-use jni::{errors, jni_sig, jni_str};
+use jni::{JValue, errors, jni_sig, jni_str, objects::JObject, sys::jbyteArray};
 use rusqlite::Connection;
-use serde_json::Value as JValue;
+use serde_json::Value as JsonValue;
 use snap::raw::Decoder;
 
 use crate::{Handler, convert::generate, file::{Argument, JSFormat, JSUrl}, functions::*, jvm, log::log, version::{self, *}, world::*};
@@ -160,17 +160,52 @@ fn read_early_classic (path: PathBuf) -> Option<World> {
 
 fn read_classic(path: PathBuf) -> Option<World> {
 
-    let jvm = match jvm::launch(jvm::Version::V8) {
-        Some(j) => j,
-        None => {
-            log(1, "Failed to initialize jvm!");
-            return None
-        },
+    let Some(stream) = path2stream(path.clone()) else {
+        log(1, format!("Failed to read in file at {}!", path.to_string_lossy()));
+        return None
     };
+
+    if stream2uint(0, &stream) != 0x271BB788 {
+        log(1,"Invalid Classic File - No Magic Number!");
+        return None
+    }
+
+    if stream[4] != 2 {
+        log(1,"Invalid Classic Version!");
+        return None
+    }
+
+    log(0, "Launching jvm...");
+
+    let Some(jvm) = jvm::launch(jvm::Version::V8, &[r#"-Djava.class.path=target/java"#]) else {
+        log(1, "Failed to initialize jvm!");
+        return None
+    };
+
+    log(0, "JVM has been launched");
 
     let _ = jvm.attach_current_thread(|env| -> errors::Result<()> {
 
-        let _ = env.call_static_method(jni_str!("ReadClassic"), jni_str!("test"), jni_sig!("()V"), &[]);
+        let Ok(java_stream) = env.byte_array_from_slice(&stream[5..stream.len()]) else {
+            log(1, "Failed to parse byte array, returning");
+            return Err(errors::Error::ParseFailed("byte_array".to_string()))
+        };
+
+        log(1, "Messages from jvm unable to be logged!");
+        log(0, "Messages will only print in terminal");
+        println!();
+
+        match env.call_static_method(
+            jni_str!("ReadClassic"), 
+            jni_str!("read"),
+            jni_sig!("([B)V"),
+            &[JValue::from(&JObject::from(java_stream))]) {
+                Ok(_) => (),
+                Err(e) => log(2, format!("{e}")),
+            }
+
+        println!();
+        log(0, "Resuming standard logging");
 
         Ok(())
     });
@@ -182,8 +217,8 @@ fn read_classic(path: PathBuf) -> Option<World> {
 }
 
 fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> {
-    let mut saved_game_json: JValue = JValue::Null;
-    let mut settings_json: JValue = JValue::Null;
+    let mut saved_game_json: JsonValue = JsonValue::Null;
+    let mut settings_json: JsonValue = JsonValue::Null;
 
     let mut format = JSFormat::Raw;
     let mut _url = JSUrl::Classic;
@@ -210,7 +245,7 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
                 }
             };
 
-            let val: JValue = match serde_json::from_str(str.as_str()) {
+            let val: JsonValue = match serde_json::from_str(str.as_str()) {
                 Ok(v) => v,
                 Err(e) => {
                     log(1, "Unable to parse json");
@@ -318,7 +353,7 @@ fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> 
     log(-1, format!("settings: {}",settings_json));
 
     let mut world_data: HashMap<String,Value> = HashMap::new();
-    let mut changed_blocks: JValue = JValue::Null;
+    let mut changed_blocks: JsonValue = JsonValue::Null;
     let mut world_size: i32 = 0;
     let mut world_seed: i64 = 0;
 

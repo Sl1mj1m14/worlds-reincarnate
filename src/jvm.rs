@@ -1,13 +1,13 @@
 use jni::vm::{InitArgsBuilder, JavaVM};
 
-use crate::{log::log, resources::{Manifest, download_from_manifest}};
+use crate::{jvm, log::log, resources::{Manifest, download_from_manifest}};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Version {
     V8
 }
 
-pub fn launch (java_version: Version) -> Option<JavaVM> {
+pub fn launch (java_version: Version, args: &[&str]) -> Option<JavaVM> {
 
     let path = match download_from_manifest(Manifest::Java(java_version)) {
         Some(p) => p,
@@ -17,7 +17,13 @@ pub fn launch (java_version: Version) -> Option<JavaVM> {
         }
     };
 
-    let jvm_args = InitArgsBuilder::new().build().unwrap(); //Decide what arguments I want or something
+    let mut builder = InitArgsBuilder::new();
+    for arg in args {
+        builder = builder.option(*arg);
+    }
+
+    let jvm_args = builder.build().unwrap();
+
 
     match JavaVM::with_libjvm(jvm_args, || Ok(path)) {
         Ok(jvm) => Some(jvm),

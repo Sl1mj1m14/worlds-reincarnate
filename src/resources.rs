@@ -399,7 +399,7 @@ pub fn download_from_manifest (manifest: Manifest) -> Option<PathBuf> {
     if manifest_file.get("files").is_none() {return None}
 
     let objects = manifest_file.get("files").unwrap().as_object().unwrap();
-    log(0, "Ensuring java 8 dependency EXISTS...");
+    //log(0, "Ensuring java 8 dependency EXISTS...");
     for (key, value) in objects {
 
         let obj_path: PathBuf = [path.clone(), key.as_str().into()].iter().collect();
