@@ -9,12 +9,9 @@ pub enum Version {
 
 pub fn launch (java_version: Version, args: &[&str]) -> Option<JavaVM> {
 
-    let path = match download_from_manifest(Manifest::Java(java_version)) {
-        Some(p) => p,
-        None => {
-            log(1, "Downloading java failed, unable to launch JVM!");
-            return None
-        }
+    let Some(path) = download_from_manifest(Manifest::Java(java_version)) else {
+        log(1, "Downloading java failed, unable to launch JVM!");
+        return None
     };
 
     let mut builder = InitArgsBuilder::new();
@@ -23,7 +20,6 @@ pub fn launch (java_version: Version, args: &[&str]) -> Option<JavaVM> {
     }
 
     let jvm_args = builder.build().unwrap();
-
 
     match JavaVM::with_libjvm(jvm_args, || Ok(path)) {
         Ok(jvm) => Some(jvm),
