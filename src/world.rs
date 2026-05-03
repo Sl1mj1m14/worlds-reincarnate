@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem::discriminant;
 
-use serde_json::Value as JValue;
+use nbt::Tag;
+use serde_json::Value as JsonValue;
 
 use crate::log::log;
 
@@ -319,34 +320,68 @@ impl Value {
         generic.set()
     }
 
-    pub fn json_to_value(jvalue: JValue) -> Value {
+    pub fn json_to_value(jvalue: JsonValue) -> Value {
         match jvalue {
-            JValue::Bool(b) => Value::Boolean(b),
-            JValue::Number(n) => {
+            JsonValue::Bool(b) => Value::Boolean(b),
+            JsonValue::Number(n) => {
                 if n.is_i64() { return Value::Long(n.as_i64().unwrap()) }
                 else if n.is_u64() { return Value::ULong(n.as_u64().unwrap()) }
                 else if n.is_f64() { return Value::Double(n.as_f64().unwrap()) }
                 else { return Value::Null }
             },
-            JValue::String(s) => Value::String(s),
-            JValue::Array(a) => {
+            JsonValue::String(s) => Value::String(s),
+            JsonValue::Array(a) => {
                 let mut new: Vec<Value> = Vec::new();
                 for v in a {new.push(Value::json_to_value(v))}
                 return Value::List(new)
             },
-            JValue::Object(o) => {
+            JsonValue::Object(o) => {
                 let mut new: HashMap<String, Value> = HashMap::new();
                 for (key, value) in o {
                     new.insert(key, Value::json_to_value(value));
                 }
                 return Value::Compound(Box::new(new))
             },
-            JValue::Null => Value::Null,
+            JsonValue::Null => Value::Null,
             _ => {
                 log(-1, "Unknown json type - library update might have broken something");
                 Value::Null
             }
         }
+    }
+
+    pub fn nbt_to_value(tag: &Tag) -> Value {
+        match tag {
+            Tag::Byte(b) => Value::Byte(*b),
+            Tag::Short(s) => Value::Short(*s),
+            Tag::Int(i) => Value::Int(*i),
+            Tag::Long(l) => Value::Long(*l),
+            Tag::Float(f) => Value::Float(*f),
+            Tag::Double(d) => Value::Double(*d),
+            Tag::ByteArray(arr) => Value::ByteArray(arr.clone()),
+            Tag::String(str) => Value::String(str.clone()),
+            Tag::List(tags) => {
+                let mut arr: Vec<Value> = Vec::new();
+                for tag in tags {
+                    arr.push(Value::nbt_to_value(tag))
+                }
+                Value::List(arr)
+            },
+            Tag::Compound(tag_map) => {
+                let mut map: HashMap<String, Value> = HashMap::new();
+                for (key, value) in tag_map {
+                    map.insert(key.clone(), Value::nbt_to_value(value));
+                }
+                Value::Compound(Box::new(map))
+            },
+            Tag::IntArray(arr) => Value::IntArray(arr.clone()),
+            Tag::LongArray(arr) => Value::LongArray(arr.clone()),
+            _ => {
+                log(-1, "Unknown nbt type - library update might have broken something");
+                Value::Null
+            }
+        }
+
     }
 
     pub fn type_as_str (&self) -> &str {
@@ -363,11 +398,11 @@ impl Value {
             Value::Float(_) => "float",
             Value::Double(_) => "double",
             Value::String(_) => "string",
-            Value::List(values) => "list",
-            Value::Compound(hash_map) => "compound",
-            Value::ByteArray(items) => "byte_array",
-            Value::IntArray(items) => "int_array",
-            Value::LongArray(items) => "long_array",
+            Value::List(_) => "list",
+            Value::Compound(_) => "compound",
+            Value::ByteArray(_) => "byte_array",
+            Value::IntArray(_) => "int_array",
+            Value::LongArray(_) => "long_array",
             Value::Null => "null",
         }
     }

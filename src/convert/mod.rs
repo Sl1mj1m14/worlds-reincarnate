@@ -86,6 +86,9 @@ fn convert_worlddata (converter: Converter, world: World, _output_edition: Strin
     for (key, value) in world.world_data.unwrap() {
         let vtype = value.type_as_str().to_string();
         let data = Data {id: key.clone(), ktype: vtype.clone()};
+
+        //Special handling for spawn position (classic to indev)
+
         let new = match converter.worlddata_map.get(&data) {
             Some(v) => v,
             None => {

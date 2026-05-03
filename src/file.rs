@@ -111,6 +111,9 @@ pub fn filter_files (edition: String, version: i32, args: Option<Vec<Argument>>)
             } else if version <= version::J_C30 {
                 is_file = true;
                 dialog.add_filter("Classic", &["dat","mine"])
+            } else if version <= version::J_I0223 {
+                is_file = true;
+                dialog.add_filter("Indev", &["mclevel"])
             } else {
                 log(1,"Searching for unknown or unsupported version!");
                 dialog

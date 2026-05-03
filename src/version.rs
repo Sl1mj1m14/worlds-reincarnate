@@ -15,6 +15,8 @@ pub const J_C13_03: i32 = 10150; //c0.0.13a_03-launcher
 pub const J_C14: i32 = 10160; //C0.0.14a
 pub const J_C29: i32 = 10780; //c0.29_02
 pub const J_C30: i32 = 10815; //c0.30c-launcher
+pub const J_I0124: i32 = 20320; //in-20100124-3
+pub const J_I0223: i32 = 20790; //in-20100223
 
 pub const JS_E620: i32 = 700; //cjs-e6201baab01dbc98b4ad
 
@@ -115,7 +117,7 @@ fn is_valid (edition: String, version:Option<i32>) -> bool {
     match edition.as_str() {
         JAVA_EDITION => {
             if version.is_some() {
-                if version.unwrap() <= J_C30 {true}
+                if version.unwrap() <= J_I0223 {true}
                 else {false}
             } else {true}
         },

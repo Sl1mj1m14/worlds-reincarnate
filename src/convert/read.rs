@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 
 use jni::{JValue, errors, jni_sig, jni_str, objects::JObject, sys::jbyteArray};
+use nbt::{Blob, FromTag, NBTRead, Tag};
 use rusqlite::Connection;
 use serde_json::Value as JsonValue;
 use snap::raw::Decoder;
@@ -20,6 +21,8 @@ pub fn read (handler: Handler) -> Option<World> {
                 read_early_classic(path)
             } else if version <= J_C30 {
                 read_classic(path)
+            } else if version <= J_I0223 {
+                read_indev(path, version)
             } else {
                 log(2, "Unrecognized or unsupported version!");
                 None
@@ -160,6 +163,8 @@ fn read_early_classic (path: PathBuf) -> Option<World> {
 
 fn read_classic(path: PathBuf) -> Option<World> {
 
+    log(2, "Reading late classic worlds is not yet supported - this will attempt but fail!");
+
     let Some(stream) = path2stream(path.clone()) else {
         log(1, format!("Failed to read in file at {}!", path.to_string_lossy()));
         return None
@@ -177,7 +182,8 @@ fn read_classic(path: PathBuf) -> Option<World> {
 
     log(0, "Launching jvm...");
 
-    let Some(jvm) = jvm::launch(jvm::Version::V8, &[r#"-Djava.class.path=target/java"#]) else {
+    //Replace class path with path to library (once we figure out how to actually build the library because I suck at Java)
+    let Some(jvm) = jvm::launch(jvm::Version::V8, &[r#"-Djava.class.path=REPLACE/ME"#]) else {
         log(1, "Failed to initialize jvm!");
         return None
     };
@@ -214,6 +220,137 @@ fn read_classic(path: PathBuf) -> Option<World> {
 
 
     None
+}
+
+fn read_indev(path: PathBuf, version: i32) -> Option<World> {
+    log(1, "Not all aspects of indev reading are implemented yet!");
+
+    let mut world_data: HashMap<String,Value> = HashMap::new();
+    let mut block_array = BlockArray::default();
+    block_array.format = ["+x".to_string(),"+z".to_string(),"+y".to_string()];
+
+    let Some(stream) = path2stream(path.clone()) else {
+        log(1, format!("Failed to read in file at {}!", path.to_string_lossy()));
+        return None
+    };
+
+    let blob = match Blob::from_bytes(stream) {
+        Ok(b) => b,
+        Err(e) => {
+            log(1, format!("Failed to parse nbt data!"));
+            log(1, format!("{e}"));
+            return None
+        },
+    };
+
+    match blob.get::<Tag>("About") {
+        Some(about) => {
+            if let Tag::Compound(map) = about {
+                for (key, value) in map {
+                    world_data.insert(key.clone(), Value::nbt_to_value(value));
+                }
+            } else {
+                log(1, "'About' tag is incorrect tag type, mclevel may be corrupted?");
+            }
+        },
+        None => log(1, "Missing 'About' tag, mclevel may be corrupted?")
+    }
+
+    match blob.get::<Tag>("Environment") {
+        Some(env) => {
+            if let Tag::Compound(map) = env {
+                for (key, value) in map {
+                    world_data.insert(key.clone(), Value::nbt_to_value(value));
+                }
+            } else {
+                log(1, "'Environment' tag is incorrect tag type, mclevel may be corrupted?");
+            }
+        },
+        None => log(1, "Missing 'Environment' tag, mclevel may be corrupted?")
+    }
+
+    match blob.get::<Tag>("Map") {
+        Some(world) => {
+            if let Tag::Compound(map) = world {
+                if let Some(x) = map.get("Width") {
+                    block_array.dims[0] = *i16::from_borrowed_tag(x).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", x)); &0}) as i32;
+                }
+                if let Some(z) = map.get("Length") {
+                    block_array.dims[1] = *i16::from_borrowed_tag(z).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", z)); &0}) as i32;
+                }
+                if let Some(y) = map.get("Height") {
+                    block_array.dims[2] = *i16::from_borrowed_tag(y).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", y)); &0}) as i32;
+                }
+
+                if let Some(spawn) = map.get("Spawn") {
+                    world_data.insert("Spawn".to_string(), Value::nbt_to_value(spawn));
+                }
+
+                let mut blocks: Vec<i8> = Vec::new();
+                if map.get("Blocks").is_some() && let Tag::ByteArray(b_arr) = map.get("Blocks").unwrap() {
+                    blocks = b_arr.clone();
+                }
+
+                let mut data: Vec<i8> = Vec::new();
+                if map.get("Data").is_some() && let Tag::ByteArray(d_arr) = map.get("Data").unwrap() {
+                    data = d_arr.clone();
+                }
+
+                for index in 0..blocks.len() {
+                    let mut map: HashMap<String,Value> = HashMap::new();
+
+                    if index < data.len() {
+                        let byte = data[index] as u8;
+                        map.insert("DataValue".to_string(), Value::UByte(byte >> 4)); //First 4 bits represent data value
+                        map.insert("LightLevel".to_string(), Value::UByte(0xf0 & byte)); //Last 4 bits represent light level
+                    }
+
+                    let block: Block = Block { 
+                        id: Value::UByte(blocks[index] as u8), 
+                        block_data: if map.len() > 0 {Some(map)} else {None}
+                    };
+
+                    block_array.blocks.push(block);
+                }
+            } else {
+                log(1, "'Map' tag is incorrect tag type, mclevel may be corrupted?");
+            }
+        },
+        None => log(1, "Missing 'Map' tag, mclevel may be corrupted?")
+    }
+
+    log(-1, format!("Amount of read in blocks from indev: {}", block_array.blocks.len()));
+    log(-1, format!("Random block is: {:?}", block_array.blocks[42]));
+
+    match blob.get::<Tag>("Entities") {
+        Some(ents) => {
+            if let Tag::List(_entities) = ents {
+                log(1, "Entities are not yet supported, coming soon! :tm:");
+            } else {
+                log(1, "'Entities' tag is incorrect tag type, mclevel may be corrupted?");
+            }
+        },
+        None => log(1, "Missing 'Entities' tag, mclevel may be corrupted?")
+    }
+
+    match blob.get::<Tag>("TileEntities") {
+        Some(tents) => {
+            if let Tag::List(_tiles) = tents {
+                log(1, "Tile Entities are not yet supported, coming soon! :tm:");
+            } else {
+                log(1, "'Tile Entities' tag is incorrect tag type, mclevel may be corrupted?");
+            }
+        },
+        None => log(1, "Missing 'Tile Entities' tag, mclevel may be corrupted?")
+    }
+
+    let mut world: World = World::default();
+    world.world_data = Some(world_data);
+    world.blocks = Some(block_array);
+    world.edition = JAVA_EDITION.to_string();
+    world.version = version;
+
+    return Some(world)
 }
 
 fn read_javascript(path: PathBuf, args: Option<Vec<Argument>>) -> Option<World> {
