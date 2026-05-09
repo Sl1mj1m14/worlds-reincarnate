@@ -183,15 +183,68 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     }
     
     log(0, "Converting block ids");
-    let mut new_blocks: Vec<Block> = Vec::new();
+
+    let mut key_blocks: Vec<Block> = Vec::new();
+    let mut split_block_data: Vec<Option<HashMap<String,Value>>> = Vec::new();
+
+    //Splitting block ids and blockdata
     for block in new_array.blocks {
-        //let split_block = convert_blockdata(converter.clone(), world.clone(), block, output_edition.clone(), output_version);
+        key_blocks.push(Block { id: block.id, block_data: None });
+        split_block_data.push(block.block_data);
+    }
 
-        let mut new_block = converter.block_map.get(&Block { id: block.id, block_data: None }).unwrap_or(&default);
+    //Converting block data
+    let mut new_block_data: Vec<Option<HashMap<String,Value>>> = vec![None; split_block_data.len()];
+    for index in 0..split_block_data.len() {
+        //Down the line, there may be a point where even blocks without block data need for example a data value to properly convert, meaning all blocks should be passed here, whether they have block data or not
+        if split_block_data[index].is_none() || converter.blockdata_map.len() <= 0 {continue}
 
-        //Handle blockdata again - merge it back in
+        let mut conv_block_data: HashMap<String,Value> = HashMap::new();
+        for (key, value) in split_block_data[index].clone().unwrap() {
+            //When the identity of the block data starts to matter, this behavior will have to shift
+            //Handles for when block data matters, primarily in regards to data value. Since we are only in indev so far, this data is so far irrelevant
+
+            let vtype = value.type_as_str().to_string();
+            let data = Data {id: key.clone(), ktype: vtype.clone()};
+
+            let Some(new ) = converter.blockdata_map.get(&data) else {continue};
+
+            let mut new_value = value.clone();
+            if vtype != new.ktype {continue} //Add support for this in the future, i.e. is number checks
+
+            conv_block_data.insert(new.id.clone(), new_value);
+
+        }
+
+        if conv_block_data.len() > 0 {
+            new_block_data[index] = Some(conv_block_data);
+        }
+    }
+
+    //Converting blocks
+    let mut new_blocks: Vec<Block> = Vec::new();
+    for block in key_blocks {
+
+        let mut new_block = converter.block_map.get(&block).unwrap_or(&default);
+
         new_blocks.push(new_block.clone());
     }
+
+    //Merging block data back in
+    for index in 0..new_block_data.len() {
+        if new_block_data[index].is_none() {continue}
+
+        let mut merge_block_data: HashMap<String,Value> = HashMap::new();
+
+        if new_blocks[index].block_data.is_some() {
+            merge_block_data.extend(new_blocks[index].block_data.clone().unwrap());
+        }
+
+        merge_block_data.extend(new_block_data[index].clone().unwrap());
+
+        new_blocks[index].block_data = Some(merge_block_data.clone());
+    }
+
     new_array.blocks = new_blocks;
 
     if format != new_array.format {
@@ -267,7 +320,7 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     Some(new_array)
 }
 
-fn convert_blockdata (converter: Converter, _world: World, block: Block, _output_edition: String, _output_version: i32) -> (Block, Option<HashMap<String,Value>>) {
+fn _convert_blockdata (converter: Converter, _world: World, block: Block, _output_edition: String, _output_version: i32) -> (Block, Option<HashMap<String,Value>>) {
     let mut identity_data: HashMap<String,Value> = HashMap::new();
     let mut extra_data: HashMap<String,Value> = HashMap::new();
     
