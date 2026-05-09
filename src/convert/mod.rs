@@ -319,39 +319,3 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
 
     Some(new_array)
 }
-
-fn _convert_blockdata (converter: Converter, _world: World, block: Block, _output_edition: String, _output_version: i32) -> (Block, Option<HashMap<String,Value>>) {
-    let mut identity_data: HashMap<String,Value> = HashMap::new();
-    let mut extra_data: HashMap<String,Value> = HashMap::new();
-    
-    if block.block_data.is_none() || converter.blockdata_map.len() <= 0 { 
-        //Down the line, there may be a point where even blocks without block data need for example a data value to properly convert, meaning all blocks should be passed here, whether they have block data or not
-        return (Block {id: block.id, block_data: None}, None)
-    }
-
-    for (key, value) in block.block_data.unwrap() {
-        //When the identity of the block data starts to matter, this behavior will have to shift
-        //Handles for when block data matters, primarily in regards to data value. Since we are only in indev so far, this data is so far irrelevant
-
-        let vtype = value.type_as_str().to_string();
-        let data = Data {id: key.clone(), ktype: vtype.clone()};
-
-        let Some(new ) = converter.blockdata_map.get(&data) else {continue};
-
-        let mut new_value = value.clone();
-        if vtype != new.ktype {continue} //Add support for this in the future, i.e. is number checks
-
-        extra_data.insert(new.id.clone(), new_value);
-
-    }
-
-    let new_block: Block = Block { id: block.id, block_data: if identity_data.len() > 0 {Some(identity_data)} else {None}};
-    return (new_block, if extra_data.len() > 0 {Some(extra_data)} else {None})
-
-}
-
-
-
-
-
-
