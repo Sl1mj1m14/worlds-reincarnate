@@ -27,6 +27,7 @@ const SAMVID_GID: &str = "1519184165";
 const BLOCK_GID: &str = "75311798";
 const BLOCK_SPECIAL_GID: &str = "516684395";
 const WORLD_DATA_GID: &str = "2102518304";
+const BLOCK_DATA_GID: &str = "549742228";
 
 pub static HASHES: OnceLock<HashMap<Resource, Info>> = OnceLock::new();
 static CLIENT: OnceLock<Client> = OnceLock::new();
@@ -59,7 +60,8 @@ pub enum Resource {
 pub enum Map {
     Block,
     BlockSpecial,
-    WorldData
+    WorldData,
+    BlockData
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -212,6 +214,13 @@ pub fn initialize () {
     });
 
     hashes.insert(
+        Resource::Map(Map::BlockData), Info {
+             hash: Hash::SHA256(map.get("MAP-BLOCKDATA").unwrap_or(&String::default()).clone()),
+             url: format!("{base_url}&gid={BLOCK_DATA_GID}"), 
+             path: [PROJECT_DIR.get().unwrap().clone(),"resources".into(),"maps".into(),"block_data.csv".into()].iter().collect()
+    });
+
+    hashes.insert(
         Resource::Generator(Generator::Javascript), Info {
              hash: Hash::SHA256(map.get("GENERATOR-JAVASCRIPT").unwrap_or(&String::default()).clone()),
              url: "https://classic.minecraft.net/assets/js/RandomLevelWorker.js".to_string(), 
@@ -250,6 +259,11 @@ pub fn initialize () {
     if !check_hash(Resource::Map(Map::WorldData)) {
         log(0, "Downloading World Data List...");
         let _ = download(Resource::Map(Map::WorldData));
+    }
+
+    if !check_hash(Resource::Map(Map::BlockData)) {
+        log(0, "Downloading Block Data List...");
+        let _ = download(Resource::Map(Map::BlockData));
     }
 
 }

@@ -1,17 +1,18 @@
 use std::collections::HashMap;
 
-use crate::{Handler, convert::worlddata::Data, log::log, version::{FOURK_2, FOURK_EDITION, FOURK_JS, J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value, World}};
+use crate::{Handler, convert::data::Data, log::log, version::{FOURK_2, FOURK_EDITION, FOURK_JS, J_C12, J_C13_03, JAVA_EDITION, JAVASCRIPT_EDITION}, world::{Block, BlockArray, Value, World}};
 
 mod read;
 mod write;
 mod block;
-mod worlddata;
+mod data;
 mod generate;
 
 #[derive(Clone)]
 pub struct Converter {
     worlddata_map: HashMap<Data, Data>,
-    block_map: HashMap<Block, Block>
+    block_map: HashMap<Block, Block>,
+    blockdata_map: HashMap<Data, Data>
 }
 
 pub fn convert(input: Handler, output: Handler) {
@@ -27,7 +28,8 @@ pub fn convert(input: Handler, output: Handler) {
 
     log(0,"Converting world...");
 
-    let world_data = match worlddata::create_map(world.clone().edition, world.clone().version, output.edition.clone(), output.version) {
+    log(0, "Mapping world data...");
+    let world_data = match data::create_map(data::Type::World, world.clone().edition, world.clone().version, output.edition.clone(), output.version) {
         Some(m) => m,
         None => {
             log(2, "Failed to build converter - world data");
@@ -35,6 +37,7 @@ pub fn convert(input: Handler, output: Handler) {
         }
     };
     
+    log(0, "Mapping block ids...");
     let block_map = match block::create_map(world.clone().edition, world.clone().version, output.edition.clone(), output.version) {
         Some(m) => m,
         None => {
@@ -43,12 +46,23 @@ pub fn convert(input: Handler, output: Handler) {
         }
     };
 
+    log(0, "Mapping block data...");
+    let block_data = match data::create_map(data::Type::Block, world.clone().edition, world.clone().version, output.edition.clone(), output.version) {
+        Some(m) => m,
+        None => {
+            log(2, "Failed to build converter - world data");
+            return
+        }
+    };
+
     let converter: Converter = Converter { 
         worlddata_map: world_data, 
-        block_map: block_map
+        block_map: block_map,
+        blockdata_map: block_data
     };
 
     if world.world_data.is_some() {
+        log(0, "Converting world data...");
         world.world_data = match convert_worlddata(converter.clone(), world.clone(), output.edition.clone(), output.version) {
             Some(w) => Some(w),
             None => {
@@ -59,6 +73,7 @@ pub fn convert(input: Handler, output: Handler) {
     }
 
     if world.blocks.is_some() {
+        log(0, "Converting blocks...");
         world.blocks = match convert_blocks(converter.clone(), world.clone(), output.edition.clone(), output.version) {
             Some(b) => Some(b),
             None => {
@@ -114,7 +129,7 @@ fn convert_worlddata (converter: Converter, world: World, _output_edition: Strin
 }
 
 fn convert_blocks (converter: Converter, world: World, output_edition: String, output_version: i32) -> Option<BlockArray> {
-    let block_array = match world.blocks {
+    let block_array = match world.blocks.clone() {
         Some(b) => b,
         None => {
             log(2, "No blocks, unable to convert!");
@@ -170,9 +185,9 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     log(0, "Converting block ids");
     let mut new_blocks: Vec<Block> = Vec::new();
     for block in new_array.blocks {
-        //Handle blockdata first - pull it out and split into what is necessary
+        //let split_block = convert_blockdata(converter.clone(), world.clone(), block, output_edition.clone(), output_version);
 
-        let mut new_block = converter.block_map.get(&block).unwrap_or(&default);
+        let mut new_block = converter.block_map.get(&Block { id: block.id, block_data: None }).unwrap_or(&default);
 
         //Handle blockdata again - merge it back in
         new_blocks.push(new_block.clone());
@@ -250,6 +265,36 @@ fn convert_blocks (converter: Converter, world: World, output_edition: String, o
     }
 
     Some(new_array)
+}
+
+fn convert_blockdata (converter: Converter, _world: World, block: Block, _output_edition: String, _output_version: i32) -> (Block, Option<HashMap<String,Value>>) {
+    let mut identity_data: HashMap<String,Value> = HashMap::new();
+    let mut extra_data: HashMap<String,Value> = HashMap::new();
+    
+    if block.block_data.is_none() || converter.blockdata_map.len() <= 0 { 
+        //Down the line, there may be a point where even blocks without block data need for example a data value to properly convert, meaning all blocks should be passed here, whether they have block data or not
+        return (Block {id: block.id, block_data: None}, None)
+    }
+
+    for (key, value) in block.block_data.unwrap() {
+        //When the identity of the block data starts to matter, this behavior will have to shift
+        //Handles for when block data matters, primarily in regards to data value. Since we are only in indev so far, this data is so far irrelevant
+
+        let vtype = value.type_as_str().to_string();
+        let data = Data {id: key.clone(), ktype: vtype.clone()};
+
+        let Some(new ) = converter.blockdata_map.get(&data) else {continue};
+
+        let mut new_value = value.clone();
+        if vtype != new.ktype {continue} //Add support for this in the future, i.e. is number checks
+
+        extra_data.insert(new.id.clone(), new_value);
+
+    }
+
+    let new_block: Block = Block { id: block.id, block_data: if identity_data.len() > 0 {Some(identity_data)} else {None}};
+    return (new_block, if extra_data.len() > 0 {Some(extra_data)} else {None})
+
 }
 
 

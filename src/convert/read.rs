@@ -275,11 +275,11 @@ fn read_indev(path: PathBuf, version: i32) -> Option<World> {
                 if let Some(x) = map.get("Width") {
                     block_array.dims[0] = *i16::from_borrowed_tag(x).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", x)); &0}) as i32;
                 }
-                if let Some(z) = map.get("Length") {
-                    block_array.dims[1] = *i16::from_borrowed_tag(z).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", z)); &0}) as i32;
-                }
                 if let Some(y) = map.get("Height") {
-                    block_array.dims[2] = *i16::from_borrowed_tag(y).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", y)); &0}) as i32;
+                    block_array.dims[1] = *i16::from_borrowed_tag(y).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", y)); &0}) as i32;
+                }
+                if let Some(z) = map.get("Length") {
+                    block_array.dims[2] = *i16::from_borrowed_tag(z).unwrap_or_else(|| {log(1, format!("{:?} is not a short?? - Defaulting to 0", z)); &0}) as i32;
                 }
 
                 if let Some(spawn) = map.get("Spawn") {

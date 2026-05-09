@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use csv::StringRecord;
 
@@ -10,18 +10,39 @@ pub struct Data {
     pub ktype: String,
 }
 
-pub fn create_map(input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Data, Data>> {
-    let path: PathBuf = resources::HASHES.get().unwrap()[&Resource::Map(Map::WorldData)].path.clone();
+pub enum Type {
+    World,
+    Block
+}
 
-    if !path.exists() {
-        log(2, "World data map not found, unable to convert world!");
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::World => write!(f, "world"),
+            Type::Block => write!(f, "block"),
+        }
+    }
+}
+
+pub fn create_map(dtype: Type, input_edition: String, input_version: i32, output_edition: String, output_version: i32) -> Option<HashMap<Data, Data>> {
+    let mut main_path: PathBuf;
+    let mut _special_path: PathBuf;
+    let mut _mod_dir: PathBuf;
+
+    match dtype {
+        Type::World => main_path = resources::HASHES.get().unwrap()[&Resource::Map(Map::WorldData)].path.clone(),
+        Type::Block => main_path = resources::HASHES.get().unwrap()[&Resource::Map(Map::BlockData)].path.clone(),
+    }
+
+    if !main_path.exists() {
+        log(2, format!("{} data map not found, unable to convert world!", dtype.to_string()));
         return None
     }
 
-    let mut reader = match csv::ReaderBuilder::new().has_headers(false).from_path(path) {
+    let mut reader = match csv::ReaderBuilder::new().has_headers(false).from_path(main_path) {
         Ok(r) => r,
         Err(e) => {
-            log(2, "Failed to parse world data map, unable to convert world!");
+            log(2, format!("Failed to parse {} data map, unable to convert world!", dtype.to_string()));
             log(2, format!("{e}"));
             return None
         }
@@ -36,7 +57,7 @@ pub fn create_map(input_edition: String, input_version: i32, output_edition: Str
         let line = match result {
             Ok(r) => r,
             Err(_) => {
-                log(1, "Invalid record when building world data map - skipping");
+                log(1, format!("Invalid record when building {} data map - skipping", dtype.to_string()));
                 continue
             }
         };
@@ -58,17 +79,16 @@ pub fn create_map(input_edition: String, input_version: i32, output_edition: Str
             Some(s) => s,
             None => continue
         };
-        log(-1, format!("Key: {:?}", key));
 
         let value = match record_to_block(output_indices.clone(), line.clone(), output_version) {
             Some(s) => s,
             None => continue
         };
-        log(-1, format!("Value: {:?}", value));
 
         map.insert(key, value);
     }
 
+    log(-1, format!("{} Data Key Value Pairs:",dtype.to_string()));
     for (key, value) in map.clone() {
         log(-1, format!("Key: {:?}", key));
         log(-1, format!("Value: {:?}", value));
