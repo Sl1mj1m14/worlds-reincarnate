@@ -26,6 +26,7 @@ const SAMVID_GID: &str = "1519184165";
 
 const BLOCK_GID: &str = "75311798";
 const BLOCK_SPECIAL_GID: &str = "516684395";
+const ENTITY_GID: &str = "2073033051";
 const WORLD_DATA_GID: &str = "2102518304";
 const BLOCK_DATA_GID: &str = "549742228";
 
@@ -60,6 +61,7 @@ pub enum Resource {
 pub enum Map {
     Block,
     BlockSpecial,
+    Entity,
     WorldData,
     BlockData
 }
@@ -207,6 +209,13 @@ pub fn initialize () {
     });
 
     hashes.insert(
+        Resource::Map(Map::Entity), Info {
+             hash: Hash::SHA256(map.get("MAP-ENTITY").unwrap_or(&String::default()).clone()),
+             url: format!("{base_url}&gid={ENTITY_GID}"), 
+             path: [PROJECT_DIR.get().unwrap().clone(),"resources".into(),"maps".into(),"entity_ids.csv".into()].iter().collect()
+    });
+
+    hashes.insert(
         Resource::Map(Map::WorldData), Info {
              hash: Hash::SHA256(map.get("MAP-WORLDDATA").unwrap_or(&String::default()).clone()),
              url: format!("{base_url}&gid={WORLD_DATA_GID}"), 
@@ -254,6 +263,11 @@ pub fn initialize () {
     if !check_hash(Resource::Map(Map::BlockSpecial)) {
         log(0, "Downloading Special Block ID List...");
         let _ = download(Resource::Map(Map::BlockSpecial));
+    }
+
+    if !check_hash(Resource::Map(Map::Entity)) {
+        log(0, "Downloading Entity ID List...");
+        let _ = download(Resource::Map(Map::Entity));
     }
 
     if !check_hash(Resource::Map(Map::WorldData)) {

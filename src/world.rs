@@ -13,7 +13,9 @@ pub struct World {
     pub version: i32,
 
     pub world_data: Option<HashMap<String,Value>>,
-    pub player_data: Option<HashMap<String,Value>>,
+
+    pub main_player: Option<Player>,
+    pub players: Option<Vec<Player>>,
 
     pub is_chunked: bool,
     pub blocks: Option<BlockArray>,
@@ -668,4 +670,16 @@ impl Hash for Entity {
         let _ = state.finish();
         
     }
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct Player {
+    pub generic_data: Option<HashMap<String,Value>>,
+    pub inventory: Option<Vec<Item>>
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct Item {
+    pub id: Value,
+    pub item_data: Option<HashMap<String,Value>>
 }
