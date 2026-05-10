@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, path::PathBuf};
 
 use csv::StringRecord;
 
-use crate::{log::log, resources::{self, Map, Resource}};
+use crate::{log::log, main, resources::{self, Map, Resource}};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Data {
@@ -12,7 +12,8 @@ pub struct Data {
 
 pub enum Type {
     World,
-    Block
+    Block,
+    Entity
 }
 
 impl Display for Type {
@@ -20,6 +21,7 @@ impl Display for Type {
         match self {
             Type::World => write!(f, "world"),
             Type::Block => write!(f, "block"),
+            Type::Entity => write!(f, "entity")
         }
     }
 }
@@ -32,6 +34,7 @@ pub fn create_map(dtype: Type, input_edition: String, input_version: i32, output
     match dtype {
         Type::World => main_path = resources::HASHES.get().unwrap()[&Resource::Map(Map::WorldData)].path.clone(),
         Type::Block => main_path = resources::HASHES.get().unwrap()[&Resource::Map(Map::BlockData)].path.clone(),
+        Type::Entity => main_path = resources::HASHES.get().unwrap()[&Resource::Map(Map::EntityData)].path.clone()
     }
 
     if !main_path.exists() {

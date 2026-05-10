@@ -319,9 +319,6 @@ fn read_indev(path: PathBuf, version: i32) -> Option<World> {
         None => log(1, "Missing 'Map' tag, mclevel may be corrupted?")
     }
 
-    log(-1, format!("Amount of read in blocks from indev: {}", block_array.blocks.len()));
-    log(-1, format!("Random block is: {:?}", block_array.blocks[42]));
-
     match blob.get::<Tag>("Entities") {
         Some(ents) => {
             if let Tag::List(_entities) = ents {
